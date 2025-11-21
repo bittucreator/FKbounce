@@ -1,0 +1,56 @@
+{
+  "name": "fkbounce",
+  "version": "2.0.0",
+  "description": "FKbounce - Email verification tool built with Next.js, TypeScript and Tailwind CSS",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [
+    "email",
+    "verification",
+    "validator",
+    "nextjs",
+    "typescript",
+    "tailwind"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@radix-ui/react-avatar": "^1.1.11",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-switch": "^1.2.6",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.84.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "disposable-email-domains": "^1.0.60",
+    "email-validator": "^2.0.4",
+    "geist": "^1.5.1",
+    "lucide-react": "^0.554.0",
+    "next": "^14.0.4",
+    "next-themes": "^0.4.6",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/react": "^18.2.46",
+    "@types/react-dom": "^18.2.18",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.0.4",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.3.3"
+  }
+}
