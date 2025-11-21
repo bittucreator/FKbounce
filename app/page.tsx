@@ -63,7 +63,7 @@ export default function Home() {
             <CardTitle className="text-3xl font-[family-name:var(--font-geist)] text-[#020202]">
               FKbounce
             </CardTitle>
-            <CardDescription className="font-[family-name:var(--font-geist-mono)] text-[#5C5855]">
+            <CardDescription className="font-[family-name:var(--font-geist-mono)] text-[#5C5855] text-[18px] leading-[21px] tracking-[-0.4px] h-[25px]">
               Email Verification Platform You Can Trust
             </CardDescription>
           </CardHeader>
@@ -92,10 +92,10 @@ export default function Home() {
             <div className="relative">
             </div>
             <h1 className="text-4xl font-[family-name:var(--font-geist)] text-[#020202]">
-              TooliQ
+              FKbounce
             </h1>
           </div>
-          <p className="text-center font-[family-name:var(--font-geist-mono)] text-[#5C5855] text-lg">
+          <p className="text-center font-[family-name:var(--font-geist-mono)] text-[#5C5855] text-[14px] leading-[16px] tracking-[-0.2px] h-[25px]">
             Email Verification Platform You Can Trust.
           </p>
         </div>

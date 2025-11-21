@@ -101,7 +101,7 @@ export default function AuthButton() {
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
           {userPlan === 'pro' && (
-            <Badge className="absolute -top-1 -right-1 px-1.5 py-0 text-[10px] h-4 bg-gradient-to-r from-purple-500 to-blue-500 border-0">
+            <Badge className="absolute -top-1 -right-1 px-1.5 py-0 text-[10px] h-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-black border-0 font-bold">
               PRO
             </Badge>
           )}
@@ -115,7 +115,7 @@ export default function AuthButton() {
                 {user.user_metadata?.full_name || 'User'}
               </p>
               {userPlan === 'pro' && (
-                <Badge className="px-1.5 py-0 text-[10px] h-4 bg-gradient-to-r from-purple-500 to-blue-500 border-0">
+                <Badge className="px-1.5 py-0 text-[10px] h-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-black border-0 font-bold">
                   PRO
                 </Badge>
               )}

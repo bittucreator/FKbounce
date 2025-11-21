@@ -85,7 +85,7 @@ export default function PricingModal({ open, onOpenChange, currentPlan = 'free' 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">Choose Your Plan</DialogTitle>
           <DialogDescription className="text-center">
