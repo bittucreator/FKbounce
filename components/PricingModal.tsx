@@ -43,7 +43,7 @@ export default function PricingModal({ open, onOpenChange, currentPlan = 'free' 
       description: 'For professionals and businesses',
       icon: Zap,
       features: [
-        '1,000,000 verifications/month',
+        '1M verifications/month',
         'Single & bulk email verification',
         'Full verification (syntax, DNS, SMTP, disposable)',
         'CSV upload support',
