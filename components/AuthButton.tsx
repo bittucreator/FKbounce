@@ -15,11 +15,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import { LogOut, History, User as UserIcon } from 'lucide-react'
 
 export default function AuthButton() {
   const [user, setUser] = useState<User | null>(null)
   const [userPlan, setUserPlan] = useState<string>('free')
+  const [emailsUsed, setEmailsUsed] = useState<number>(0)
+  const [emailsLimit, setEmailsLimit] = useState<number>(500)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -33,12 +36,14 @@ export default function AuthButton() {
       if (user) {
         const { data: planData } = await supabase
           .from('user_plans')
-          .select('plan')
+          .select('plan, verifications_used, verifications_limit')
           .eq('user_id', user.id)
           .single()
         
         if (planData) {
           setUserPlan(planData.plan)
+          setEmailsUsed(planData.verifications_used || 0)
+          setEmailsLimit(planData.verifications_limit || 500)
         }
       }
       
@@ -123,6 +128,17 @@ export default function AuthButton() {
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
+            <div className="mt-3">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-muted-foreground">
+                  {emailsUsed.toLocaleString()} / {emailsLimit.toLocaleString()} emails
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {Math.round((emailsUsed / emailsLimit) * 100)}%
+                </p>
+              </div>
+              <Progress value={(emailsUsed / emailsLimit) * 100} className="h-2" />
+            </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
