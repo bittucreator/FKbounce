@@ -14,10 +14,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { LogOut, History, User as UserIcon } from 'lucide-react'
 
 export default function AuthButton() {
   const [user, setUser] = useState<User | null>(null)
+  const [userPlan, setUserPlan] = useState<string>('free')
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -26,6 +28,20 @@ export default function AuthButton() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      
+      // Fetch user plan
+      if (user) {
+        const { data: planData } = await supabase
+          .from('user_plans')
+          .select('plan')
+          .eq('user_id', user.id)
+          .single()
+        
+        if (planData) {
+          setUserPlan(planData.plan)
+        }
+      }
+      
       setLoading(false)
     }
 
@@ -84,14 +100,26 @@ export default function AuthButton() {
             <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name || user.email} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
+          {userPlan === 'pro' && (
+            <Badge className="absolute -top-1 -right-1 px-1.5 py-0 text-[10px] h-4 bg-gradient-to-r from-purple-500 to-blue-500 border-0">
+              PRO
+            </Badge>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {user.user_metadata?.full_name || 'User'}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium leading-none">
+                {user.user_metadata?.full_name || 'User'}
+              </p>
+              {userPlan === 'pro' && (
+                <Badge className="px-1.5 py-0 text-[10px] h-4 bg-gradient-to-r from-purple-500 to-blue-500 border-0">
+                  PRO
+                </Badge>
+              )}
+            </div>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
