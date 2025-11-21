@@ -63,14 +63,11 @@ export default function Home() {
             <CardTitle className="text-3xl font-[family-name:var(--font-geist)] text-[#020202]">
               FKbounce
             </CardTitle>
-            <CardDescription className="font-[family-name:var(--font-geist-mono)] text-[#5C5855] text-[18px] leading-[21px] tracking-[-0.4px] h-[25px]">
+            <CardDescription className="font-[family-name:var(--font-geist-mono)] text-[#5C5855] text-[14px] leading-[21px] tracking-[-0.4px] h-[25px]">
               Email Verification Platform You Can Trust
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-center text-sm text-[#5C5855] font-mono">
-              Sign in to start verifying email addresses with our comprehensive validation system.
-            </p>
             <Button 
               onClick={handleSignIn} 
               className="w-full"
@@ -78,6 +75,9 @@ export default function Home() {
             >
               Sign in with Google
             </Button>
+            <p className="text-center text-xs text-[#5C5855] font-mono">
+              Sign in to start verifying email addresses.
+            </p>
           </CardContent>
         </Card>
       </main>

@@ -1,9 +1,7 @@
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
-import AuthButton from '../components/AuthButton'
-import UpgradeButton from '../components/UpgradeButton'
-import AppBreadcrumb from '../components/AppBreadcrumb'
+import NavigationWrapper from '../components/NavigationWrapper'
 import { ThemeProvider } from '../components/ThemeProvider'
 
 const geist = localFont({
@@ -41,13 +39,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div className="fixed top-4 left-4 z-50">
-            <AppBreadcrumb />
-          </div>
-          <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
-            <UpgradeButton />
-            <AuthButton />
-          </div>
+          <NavigationWrapper />
           {children}
         </ThemeProvider>
       </body>
