@@ -58,7 +58,7 @@ export default function Home() {
         <Card className="w-full max-w-md mx-4">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <Lock className="h-8 w-8 text-[#020202]" />
+              <img src="/Logo-black.png" alt="FKbounce" className="h-12 w-auto" />
             </div>
             <CardTitle className="text-3xl font-[family-name:var(--font-geist)] text-[#020202]">
               FKbounce
@@ -89,8 +89,7 @@ export default function Home() {
       <header className="border-b bg-[#eeeeee]">
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="relative">
-            </div>
+            <img src="/Logo-black.png" alt="FKbounce" className="h-10 w-auto" />
             <h1 className="text-4xl font-[family-name:var(--font-geist)] text-[#020202]">
               FKbounce
             </h1>

@@ -21,6 +21,10 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: 'FKbounce',
   description: 'Validate email addresses with comprehensive checks',
+  icons: {
+    icon: '/favicon-black.png',
+    apple: '/favicon-black.png',
+  },
 }
 
 export default function RootLayout({
