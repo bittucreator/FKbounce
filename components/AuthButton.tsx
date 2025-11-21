@@ -1,10 +1,10 @@
 'use client'
 
-import { createClient } from '/Users/bittu/Email-verifier/lib/supabase/client.ts'
+import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { User } from '@supabase/supabase-js'
-import { Button } from '/Users/bittu/Email-verifier/components/ui/button.tsx'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +12,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '/Users/bittu/Email-verifier/components/ui/dropdown-menu.tsx'
-import { Avatar, AvatarFallback, AvatarImage } from '/Users/bittu/Email-verifier/components/ui/avatar.tsx'
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { LogOut, History, User as UserIcon } from 'lucide-react'
 
 export default function AuthButton() {

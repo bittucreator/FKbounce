@@ -1,8 +1,8 @@
-import { createClient } from '/Users/bittu/Email-verifier/lib/supabase/server.ts'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '/Users/bittu/Email-verifier/components/ui/card.tsx'
-import { Badge } from '/Users/bittu/Email-verifier/components/ui/badge.tsx'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '/Users/bittu/Email-verifier/components/ui/table.tsx'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDistanceToNow } from 'date-fns'
 
 interface VerificationHistoryItem {

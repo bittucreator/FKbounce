@@ -3,7 +3,7 @@ import dns from 'dns'
 import { promisify } from 'util'
 import net from 'net'
 import emailValidator from 'email-validator'
-import { createClient } from '/Users/bittu/Email-verifier/lib/supabase/server.ts'
+import { createClient } from '@/lib/supabase/server'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
