@@ -82,6 +82,18 @@ CREATE POLICY "Users can view own subscription"
     FOR SELECT
     USING (auth.uid() = user_id);
 
+-- Create policy: Users can insert their own subscription
+CREATE POLICY "Users can insert own subscription"
+    ON subscriptions
+    FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+-- Create policy: Users can update their own subscription
+CREATE POLICY "Users can update own subscription"
+    ON subscriptions
+    FOR UPDATE
+    USING (auth.uid() = user_id);
+
 -- Create index on user_id for faster queries
 CREATE INDEX IF NOT EXISTS idx_user_plans_user_id ON user_plans(user_id);
 
@@ -93,6 +105,12 @@ CREATE POLICY "Users can view own plan"
     ON user_plans
     FOR SELECT
     USING (auth.uid() = user_id);
+
+-- Create policy: Users can insert their own plan
+CREATE POLICY "Users can insert own plan"
+    ON user_plans
+    FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
 
 -- Create policy: Users can update their own plan
 CREATE POLICY "Users can update own plan"

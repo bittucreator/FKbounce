@@ -63,9 +63,6 @@ export default function Home() {
             <CardTitle className="text-3xl font-[family-name:var(--font-geist)] text-[#020202]">
               FKbounce
             </CardTitle>
-            <CardDescription className="font-[family-name:var(--font-geist-mono)] text-[#5C5855] text-[14px] leading-[21px] tracking-[-0.4px] h-[25px]">
-              Email Verification Platform You Can Trust
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button 
@@ -88,15 +85,12 @@ export default function Home() {
     <main className="min-h-screen flex flex-col">
       <header className="border-b bg-[#eeeeee]">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <img src="/Logo-black.png" alt="FKbounce" className="h-10 w-auto" />
-            <h1 className="text-4xl font-[family-name:var(--font-geist)] text-[#020202]">
+          <div className="flex items-center justify-center gap-2">
+            <img src="/Logo-black.png" alt="FKbounce" className="h-7 w-auto" />
+            <h1 className="text-2xl font-[family-name:var(--font-geist)] text-[#020202]">
               FKbounce
             </h1>
           </div>
-          <p className="text-center font-[family-name:var(--font-geist-mono)] text-[#5C5855] text-[14px] leading-[16px] tracking-[-0.2px] h-[25px]">
-            Email Verification Platform You Can Trust.
-          </p>
         </div>
       </header>
 
