@@ -16,11 +16,19 @@ const supabaseAdmin = createClient(
 
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
   try {
-    const hmac = crypto.createHmac('sha256', secret);
+    // Remove the 'whsec_' prefix from the secret if present
+    const cleanSecret = secret.startsWith('whsec_') ? secret.substring(6) : secret;
+    
+    const hmac = crypto.createHmac('sha256', cleanSecret);
     const digest = hmac.update(payload).digest('base64');
+    
+    console.log('Computed digest:', digest);
+    console.log('Received signature:', signature);
+    console.log('Signatures match:', digest === signature);
     
     // Prevent RangeError by checking buffer lengths
     if (signature.length !== digest.length) {
+      console.log('Length mismatch:', { signatureLength: signature.length, digestLength: digest.length });
       return false;
     }
     
@@ -38,6 +46,8 @@ export async function POST(req: NextRequest) {
     const webhookTimestamp = req.headers.get('webhook-timestamp');
     const webhookSignature = req.headers.get('webhook-signature');
 
+    console.log('Webhook headers:', { webhookId, webhookTimestamp, webhookSignature });
+
     if (!webhookSignature || !webhookId || !webhookTimestamp) {
       console.error('Missing webhook headers:', { webhookSignature, webhookId, webhookTimestamp });
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
@@ -47,8 +57,14 @@ export async function POST(req: NextRequest) {
     const signatureParts = webhookSignature.split(',');
     const signature = signatureParts.length > 1 ? signatureParts[1] : webhookSignature;
 
+    console.log('Extracted signature:', signature);
+    console.log('Webhook secret (first 10 chars):', process.env.DODO_WEBHOOK_SECRET?.substring(0, 10));
+
     // Create signed content: webhook-id.webhook-timestamp.payload
     const signedContent = `${webhookId}.${webhookTimestamp}.${payload}`;
+    
+    console.log('Signed content length:', signedContent.length);
+    console.log('Signed content preview:', signedContent.substring(0, 100));
 
     // Verify webhook signature
     const isValid = verifyWebhookSignature(
