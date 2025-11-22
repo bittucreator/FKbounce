@@ -4,6 +4,7 @@ import { promisify } from 'util'
 import net from 'net'
 import emailValidator from 'email-validator'
 import { createClient } from '@/lib/supabase/server'
+import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -139,7 +140,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get or create user plan
+    // Get or create user plan first to determine rate limit
     let { data: userPlan } = await supabase
       .from('user_plans')
       .select('*')
@@ -158,6 +159,36 @@ export async function POST(request: NextRequest) {
         .select()
         .single()
       userPlan = newPlan
+    }
+
+    // Apply rate limiting based on user plan
+    // Free: 120 req/min, Pro: 600 req/min
+    const rateConfig = userPlan?.plan === 'pro' 
+      ? rateLimitConfigs.apiPro 
+      : rateLimitConfigs.apiFree
+
+    const rateLimitResult = await rateLimit(
+      `verify-bulk:${user.id}`,
+      rateConfig
+    )
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded. Please try again later.',
+          limit: rateLimitResult.limit,
+          remaining: rateLimitResult.remaining,
+          reset: rateLimitResult.reset
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+          }
+        }
+      )
     }
 
     // Check plan limits

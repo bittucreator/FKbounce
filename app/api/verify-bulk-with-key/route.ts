@@ -3,12 +3,18 @@ import dns from 'dns'
 import { promisify } from 'util'
 import net from 'net'
 import emailValidator from 'email-validator'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
 const resolveMx = promisify(dns.resolveMx)
+
+// Create admin client for API key verification
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 interface VerificationResult {
   email: string
@@ -112,63 +118,60 @@ async function verifyEmail(email: string): Promise<VerificationResult> {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { email } = body
-
-    if (!email) {
-      return NextResponse.json(
-        { error: 'Email is required' },
-        { status: 400 }
-      )
-    }
-
-    // Check user authentication and limits
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const authHeader = request.headers.get('authorization')
     
-    if (!user) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
-        { error: 'Authentication required' },
+        { error: 'Missing or invalid authorization header' },
         { status: 401 }
       )
     }
 
-    // Get or create user plan first to determine rate limit
-    let { data: userPlan } = await supabase
-      .from('user_plans')
-      .select('*')
-      .eq('user_id', user.id)
+    const apiKey = authHeader.substring(7) // Remove 'Bearer '
+
+    // Verify API key and get user
+    const { data: keyData, error: keyError } = await supabaseAdmin
+      .from('api_keys')
+      .select('user_id')
+      .eq('key', apiKey)
       .single()
 
-    if (!userPlan) {
-      const { data: newPlan } = await supabase
-        .from('user_plans')
-        .insert({
-          user_id: user.id,
-          plan: 'free',
-          verifications_used: 0,
-          verifications_limit: 500,
-        })
-        .select()
-        .single()
-      userPlan = newPlan
+    if (keyError || !keyData) {
+      return NextResponse.json(
+        { error: 'Invalid API key' },
+        { status: 401 }
+      )
     }
 
+    const userId = keyData.user_id
+
+    // Update last_used_at
+    await supabaseAdmin
+      .from('api_keys')
+      .update({ last_used_at: new Date().toISOString() })
+      .eq('key', apiKey)
+
+    // Get user plan for rate limiting
+    const { data: userPlan } = await supabaseAdmin
+      .from('user_plans')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+
     // Apply rate limiting based on user plan
-    // Free: 120 req/min, Pro: 600 req/min
     const rateConfig = userPlan?.plan === 'pro' 
       ? rateLimitConfigs.apiPro 
       : rateLimitConfigs.apiFree
 
     const rateLimitResult = await rateLimit(
-      `verify:${user.id}`,
+      `api-verify:${userId}`,
       rateConfig
     )
 
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { 
-          error: 'Rate limit exceeded. Please try again later.',
+          error: 'Rate limit exceeded',
           limit: rateLimitResult.limit,
           remaining: rateLimitResult.remaining,
           reset: rateLimitResult.reset
@@ -184,43 +187,89 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user has remaining verifications
+    // Check monthly verification limits
     if (userPlan && userPlan.verifications_used >= userPlan.verifications_limit) {
       return NextResponse.json(
-        { error: 'Verification limit reached. Please upgrade your plan.' },
+        { error: 'Monthly verification limit reached. Please upgrade your plan.' },
         { status: 403 }
       )
     }
 
-    const result = await verifyEmail(email)
+    const body = await request.json()
+    const { emails } = body
+
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return NextResponse.json(
+        { error: 'emails array is required and must not be empty' },
+        { status: 400 }
+      )
+    }
+
+    if (emails.length > 1000) {
+      return NextResponse.json(
+        { error: 'Maximum 1000 emails per request' },
+        { status: 400 }
+      )
+    }
+
+    // Check if user has enough quota for this bulk verification
+    const remainingQuota = (userPlan?.verifications_limit || 0) - (userPlan?.verifications_used || 0)
+    if (remainingQuota < emails.length) {
+      return NextResponse.json(
+        { 
+          error: 'Insufficient verification quota',
+          required: emails.length,
+          remaining: remainingQuota
+        },
+        { status: 403 }
+      )
+    }
+
+    // Verify all emails
+    const results = await Promise.all(
+      emails.map(email => verifyEmail(email))
+    )
+
+    const validCount = results.filter(r => r.valid).length
+    const invalidCount = results.length - validCount
     
     // Save to history and increment usage count
     try {
-      await supabase.from('verification_history').insert({
-        user_id: user.id,
-        verification_type: 'single',
-        email_count: 1,
-        valid_count: result.valid ? 1 : 0,
-        invalid_count: result.valid ? 0 : 1,
-        results: [result]
+      await supabaseAdmin.from('verification_history').insert({
+        user_id: userId,
+        verification_type: 'bulk',
+        email_count: emails.length,
+        valid_count: validCount,
+        invalid_count: invalidCount,
+        results: results
       })
 
       // Increment verification count
-      await supabase
+      await supabaseAdmin
         .from('user_plans')
         .update({ 
-          verifications_used: (userPlan?.verifications_used || 0) + 1,
+          verifications_used: (userPlan?.verifications_used || 0) + emails.length,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user.id)
-    } catch (historyError) {
-      console.error('Error saving history:', historyError)
-      // Don't fail the request if history save fails
+        .eq('user_id', userId)
+    } catch (error) {
+      console.error('Error saving verification:', error)
     }
-    
-    return NextResponse.json(result)
+
+    return NextResponse.json({
+      total: emails.length,
+      valid: validCount,
+      invalid: invalidCount,
+      results
+    }, {
+      headers: {
+        'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+        'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+      }
+    })
   } catch (error) {
-    console.error('Verification error:', error)
+    console.error('API verification error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit';
 
 // Create a service role client for server-side operations
 const supabaseAdmin = createClient(
@@ -50,6 +51,21 @@ function verifyWebhookSignature(payload: string, signature: string, secret: stri
 
 export async function POST(req: NextRequest) {
   try {
+    // Apply rate limiting for webhook - 100 requests per minute
+    const ip = req.ip || req.headers.get('x-forwarded-for') || 'unknown'
+    const rateLimitResult = await rateLimit(
+      `webhook:${ip}`,
+      rateLimitConfigs.webhook
+    )
+
+    if (!rateLimitResult.success) {
+      console.error('Webhook rate limit exceeded for IP:', ip)
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' },
+        { status: 429 }
+      )
+    }
+
     const payload = await req.text();
     const webhookId = req.headers.get('webhook-id');
     const webhookTimestamp = req.headers.get('webhook-timestamp');
