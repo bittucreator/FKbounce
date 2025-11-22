@@ -295,7 +295,7 @@ export default function BulkVerifier() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <img src="/shield.svg" alt="Shield" className="h-5 w-5" />
+                <img src="/shield.svg" alt="Shield" className="h-6 w-6" />
                 Verification
               </CardTitle>
             </CardHeader>
