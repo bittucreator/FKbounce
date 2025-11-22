@@ -10,14 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Mail, Shield, Lock } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '../components/ui/dialog'
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
@@ -165,7 +157,7 @@ export default function Home() {
         </div>
         
         {/* Sign-in card */}
-        <Card className="w-full h-full align-middle max-w-md mx-auto h-[350px] z-20 mb-8 xl:mb-0 flex flex-col items-center justify-center">
+        <Card className="w-full max-w-md mx-auto h-[350px] z-20 mb-8 xl:mb-0 flex flex-col items-center justify-center">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <img src="/Logo-black.png" alt="FKbounce" className="h-12 w-auto" />
@@ -225,88 +217,12 @@ export default function Home() {
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-[#5C5855]">
             <p className="font-mono">© 2025 FKBounce</p>
             <div className="flex items-center gap-4">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button className="hover:text-[#020202] transition-colors font-mono">Privacy</button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl font-[family-name:var(--font-geist)]">Privacy Policy</DialogTitle>
-                    <DialogDescription className="text-left space-y-4 pt-4">
-                      <p><strong>Effective Date:</strong> November 22, 2025</p>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">1. Information We Collect</h3>
-                        <p>We collect email addresses you submit for verification, along with your account information when you sign in with Google.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">2. How We Use Your Information</h3>
-                        <p>We use your information to provide email verification services, maintain your account, and improve our platform.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">3. Data Storage and Security</h3>
-                        <p>Your data is securely stored and encrypted. We implement industry-standard security measures to protect your information.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">4. Data Sharing</h3>
-                        <p>We do not sell or share your personal information with third parties except as necessary to provide our services.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">5. Your Rights</h3>
-                        <p>You have the right to access, modify, or delete your personal data at any time.</p>
-                      </div>
-                    </DialogDescription>
-                  </DialogHeader>
-                </DialogContent>
-              </Dialog>
-              
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button className="hover:text-[#020202] transition-colors font-mono">Terms</button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl font-[family-name:var(--font-geist)]">Terms of Service</DialogTitle>
-                    <DialogDescription className="text-left space-y-4 pt-4">
-                      <p><strong>Effective Date:</strong> November 22, 2025</p>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">1. Acceptance of Terms</h3>
-                        <p>By accessing and using FKBounce, you agree to be bound by these Terms of Service.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">2. Service Description</h3>
-                        <p>FKBounce provides email verification services to help you validate email addresses for quality and deliverability.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">3. Usage Limits</h3>
-                        <p>Free users receive 500 verifications per month. Pro users receive 1,000,000 verifications per month. API rate limits apply as specified in your plan.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">4. Acceptable Use</h3>
-                        <p>You agree not to use FKBounce for spam, illegal activities, or to violate any applicable laws and regulations.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">5. Account Termination</h3>
-                        <p>We reserve the right to suspend or terminate accounts that violate these terms or engage in abusive behavior.</p>
-                      </div>
-                      
-                      <div>
-                        <h3 className="font-semibold text-[#020202] mb-2">6. Limitation of Liability</h3>
-                        <p>FKBounce is provided "as is" without warranties. We are not liable for any damages arising from your use of the service.</p>
-                      </div>
-                    </DialogDescription>
-                  </DialogHeader>
-                </DialogContent>
-              </Dialog>
+              <a href="/privacy" className="hover:text-[#020202] transition-colors font-mono">
+                Privacy Policy
+              </a>
+              <a href="/terms" className="hover:text-[#020202] transition-colors font-mono">
+                Terms of Service
+              </a>
             </div>
           </div>
         </footer>
@@ -360,88 +276,12 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#5C5855]">
           <p className="font-mono">© 2025 FKBounce</p>
           <div className="flex items-center gap-4">
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="hover:text-[#020202] transition-colors font-mono">Privacy Policy</button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-[family-name:var(--font-geist)]">Privacy Policy</DialogTitle>
-                  <DialogDescription className="text-left space-y-4 pt-4">
-                    <p><strong>Effective Date:</strong> November 22, 2025</p>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">1. Information We Collect</h3>
-                      <p>We collect email addresses you submit for verification, along with your account information when you sign in with Google.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">2. How We Use Your Information</h3>
-                      <p>We use your information to provide email verification services, maintain your account, and improve our platform.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">3. Data Storage and Security</h3>
-                      <p>Your data is securely stored and encrypted. We implement industry-standard security measures to protect your information.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">4. Data Sharing</h3>
-                      <p>We do not sell or share your personal information with third parties except as necessary to provide our services.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">5. Your Rights</h3>
-                      <p>You have the right to access, modify, or delete your personal data at any time.</p>
-                    </div>
-                  </DialogDescription>
-                </DialogHeader>
-              </DialogContent>
-            </Dialog>
-            
-            <Dialog>
-              <DialogTrigger asChild>
-                <button className="hover:text-[#020202] transition-colors font-mono">Terms of Service</button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-[family-name:var(--font-geist)]">Terms of Service</DialogTitle>
-                  <DialogDescription className="text-left space-y-4 pt-4">
-                    <p><strong>Effective Date:</strong> November 22, 2025</p>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">1. Acceptance of Terms</h3>
-                      <p>By accessing and using FKBounce, you agree to be bound by these Terms of Service.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">2. Service Description</h3>
-                      <p>FKBounce provides email verification services to help you validate email addresses for quality and deliverability.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">3. Usage Limits</h3>
-                      <p>Free users receive 500 verifications per month. Pro users receive 1,000,000 verifications per month. API rate limits apply as specified in your plan.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">4. Acceptable Use</h3>
-                      <p>You agree not to use FKBounce for spam, illegal activities, or to violate any applicable laws and regulations.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">5. Account Termination</h3>
-                      <p>We reserve the right to suspend or terminate accounts that violate these terms or engage in abusive behavior.</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-semibold text-[#020202] mb-2">6. Limitation of Liability</h3>
-                      <p>FKBounce is provided "as is" without warranties. We are not liable for any damages arising from your use of the service.</p>
-                    </div>
-                  </DialogDescription>
-                </DialogHeader>
-              </DialogContent>
-            </Dialog>
+            <a href="/privacy" className="hover:text-[#020202] transition-colors font-mono">
+              Privacy Policy
+            </a>
+            <a href="/terms" className="hover:text-[#020202] transition-colors font-mono">
+              Terms of Service
+            </a>
           </div>
         </div>
       </footer>
