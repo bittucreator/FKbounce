@@ -55,8 +55,67 @@ export default function Home() {
 
   if (!user) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
-        <Card className="w-full max-w-md mx-4">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-[#eeeeee] relative px-4">
+        {/* Desktop floating feature cards */}
+        <div className="hidden xl:block absolute left-8 top-1/2 -translate-y-1/2 w-80 z-10">
+          <div className="bg-white shadow-lg p-6 mb-10 border border-[#ececec]">
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/Mail.svg" alt="Single" className="h-7 w-7" />
+              <span className="font-mono text-lg font-semibold text-[#020202]">Single Verification</span>
+            </div>
+            <p className="text-sm text-[#5C5855] leading-relaxed">Instantly check if an email address is valid, disposable, or risky.</p>
+          </div>
+          <div className="bg-white shadow-lg p-6 border border-[#ececec]">
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/bulk emails.svg" alt="Bulk" className="h-7 w-7" />
+              <span className="font-mono text-lg font-semibold text-[#020202]">Bulk Verification</span>
+            </div>
+            <p className="text-sm text-[#5C5855] leading-relaxed">Upload a CSV or paste up to 1,000,000 emails for fast batch validation.</p>
+          </div>
+        </div>
+        <div className="hidden xl:block absolute right-8 top-1/2 -translate-y-1/2 w-80 z-10">
+          <div className="bg-white shadow-lg p-6 mb-10 border border-[#ececec]">
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/pro.svg" alt="Pro" className="h-7 w-7" />
+              <span className="font-mono text-lg font-semibold text-[#020202]">Pro Plan</span>
+            </div>
+            <p className="text-sm text-[#5C5855] leading-relaxed">Upgrade for 1,000,000 verifications/month, priority support, and more.</p>
+          </div>
+          <div className="bg-white shadow-lg p-6 border border-[#ececec]">
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/csv-upload.svg" alt="CSV" className="h-7 w-7" />
+              <span className="font-mono text-lg font-semibold text-[#020202]">CSV Upload</span>
+            </div>
+            <p className="text-sm text-[#5C5855] leading-relaxed">Drag & drop your CSV file for instant bulk email checks.</p>
+          </div>
+        </div>
+        
+        {/* Mobile feature cards - Top */}
+        <div className="xl:hidden w-full max-w-sm mb-8 z-10">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="bg-white shadow-lg p-4 border border-[#ececec]">
+              <div className="flex items-start gap-3">
+                <img src="/Mail.svg" alt="Single" className="h-6 w-6 mt-1" />
+                <div className="text-left">
+                  <span className="font-mono text-sm font-semibold text-[#020202] block mb-1">Single Verification</span>
+                  <p className="text-xs text-[#5C5855] leading-relaxed">Instantly check if an email address is valid, disposable, or risky.</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white shadow-lg p-4 border border-[#ececec]">
+              <div className="flex items-start gap-3">
+                <img src="/bulk emails.svg" alt="Bulk" className="h-6 w-6 mt-1" />
+                <div className="text-left">
+                  <span className="font-mono text-sm font-semibold text-[#020202] block mb-1">Bulk Verification</span>
+                  <p className="text-xs text-[#5C5855] leading-relaxed">Upload a CSV or paste up to 1,000,000 emails for fast batch validation.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Sign-in card */}
+        <Card className="w-full max-w-md mx-4 h-[350px] z-20 mb-8 xl:mb-0 flex flex-col items-center justify-center">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <img src="/Logo-black.png" alt="FKbounce" className="h-12 w-auto" />
@@ -68,16 +127,39 @@ export default function Home() {
           <CardContent className="space-y-4">
             <Button 
               onClick={handleSignIn} 
-              className="w-full"
-              size="lg"
+              className="w-full items-center justify-center flex gap-2"
             >
-              Sign in with Google
+              <Lock className="h-5 w-5" /> Sign in with Google
             </Button>
             <p className="text-center text-xs text-[#5C5855] font-mono">
               Sign in to start verifying email addresses.
             </p>
           </CardContent>
         </Card>
+        
+        {/* Mobile feature cards - Bottom */}
+        <div className="xl:hidden w-full max-w-sm mt-8 z-10">
+          <div className="grid grid-cols-1 gap-4">
+            <div className="bg-white shadow-lg p-4 border border-[#ececec]">
+              <div className="flex items-start gap-3">
+                <img src="/pro.svg" alt="Pro" className="h-6 w-6 mt-1" />
+                <div className="text-left">
+                  <span className="font-mono text-sm font-semibold text-[#020202] block mb-1">Pro Plan</span>
+                  <p className="text-xs text-[#5C5855] leading-relaxed">Upgrade for 1,000,000 verifications/month, priority support, and more.</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white shadow-lg p-4 border border-[#ececec]">
+              <div className="flex items-start gap-3">
+                <img src="/csv-upload.svg" alt="CSV" className="h-6 w-6 mt-1" />
+                <div className="text-left">
+                  <span className="font-mono text-sm font-semibold text-[#020202] block mb-1">CSV Upload</span>
+                  <p className="text-xs text-[#5C5855] leading-relaxed">Drag & drop your CSV file for instant bulk email checks.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
     )
   }
