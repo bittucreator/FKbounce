@@ -4,6 +4,7 @@ import './globals.css'
 import NavigationWrapper from '../components/NavigationWrapper'
 import { ThemeProvider } from '../components/ThemeProvider'
 import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { websiteSchema, organizationSchema, faqSchema } from './schema'
 
 const geist = localFont({
@@ -140,6 +141,7 @@ export default function RootLayout({
           <NavigationWrapper />
           {children}
           <Analytics />
+          <SpeedInsights />
         </ThemeProvider>
       </body>
     </html>
