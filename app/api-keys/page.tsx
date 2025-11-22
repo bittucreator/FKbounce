@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Separator } from '../../components/ui/separator'
-import { ArrowLeft, Key, Copy, Eye, EyeOff, Trash2, Plus, Code, Book } from 'lucide-react'
+import { ArrowLeft, Key, Copy, Eye, EyeOff, Trash2, Plus, Code, Book, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/ui/accordion'
 
@@ -20,6 +20,12 @@ interface ApiKey {
   last_used_at: string | null
 }
 
+interface ApiStatus {
+  endpoint: string
+  status: 'checking' | 'operational' | 'error'
+  responseTime?: number
+}
+
 export default function ApiKeysPage() {
   const [loading, setLoading] = useState(true)
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
@@ -28,12 +34,70 @@ export default function ApiKeysPage() {
   const [showKey, setShowKey] = useState<string | null>(null)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [userPlan, setUserPlan] = useState<string>('free')
+  const [apiStatuses, setApiStatuses] = useState<ApiStatus[]>([
+    { endpoint: 'Single Email Verification', status: 'checking' },
+    { endpoint: 'Bulk Email Verification', status: 'checking' }
+  ])
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     loadApiKeys()
   }, [])
+
+  const checkApiStatus = async (apiKey: string) => {
+    setApiStatuses([
+      { endpoint: 'Single Email Verification', status: 'checking' },
+      { endpoint: 'Bulk Email Verification', status: 'checking' }
+    ])
+
+    const endpoints = [
+      { name: 'Single Email Verification', url: '/api/verify-with-key' },
+      { name: 'Bulk Email Verification', url: '/api/verify-bulk-with-key' }
+    ]
+
+    const statusChecks = endpoints.map(async (endpoint) => {
+      try {
+        const startTime = Date.now()
+        const response = await fetch(endpoint.url, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(
+            endpoint.name === 'Bulk Email Verification' 
+              ? { emails: ['test@example.com'] }
+              : { email: 'test@example.com' }
+          )
+        })
+        const responseTime = Date.now() - startTime
+        const data = await response.json()
+
+        // Check if response is successful (200-299 status or valid JSON response)
+        if (response.ok || (data && typeof data === 'object')) {
+          return {
+            endpoint: endpoint.name,
+            status: 'operational' as const,
+            responseTime
+          }
+        } else {
+          return {
+            endpoint: endpoint.name,
+            status: 'error' as const
+          }
+        }
+      } catch (error) {
+        return {
+          endpoint: endpoint.name,
+          status: 'error' as const
+        }
+      }
+    })
+
+    const results = await Promise.all(statusChecks)
+    setApiStatuses(results)
+  }
 
   const loadApiKeys = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -101,6 +165,9 @@ export default function ApiKeysPage() {
       setNewKeyName('')
       await loadApiKeys()
       setShowKey(newKey)
+      
+      // Test API status with the new key
+      checkApiStatus(newKey)
     } catch (error) {
       console.error('Error creating API key:', error)
       alert('Failed to create API key')
@@ -168,7 +235,7 @@ export default function ApiKeysPage() {
             API Keys
           </h1>
           <p className="text-[#5C5855] mt-2 font-mono text-sm">
-            Create and manage API keys for programmatic access
+            Create and manage API keys.
           </p>
         </div>
 
@@ -180,6 +247,59 @@ export default function ApiKeysPage() {
             Monthly limit applies to both API usage
           </AlertDescription>
         </Alert>
+
+        {/* API Status */}
+        {apiKeys.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5" />
+                API Status
+              </CardTitle>
+              <CardDescription>
+                Test your API endpoints • Using first API key
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {apiStatuses.map((status, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {status.status === 'checking' && (
+                        <Loader2 className="h-5 w-5 animate-spin text-[#5C5855]" />
+                      )}
+                      {status.status === 'operational' && (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      )}
+                      {status.status === 'error' && (
+                        <XCircle className="h-5 w-5 text-red-600" />
+                      )}
+                      <div>
+                        <p className="font-medium text-[#020202]">{status.endpoint}</p>
+                        {status.responseTime && (
+                          <p className="text-xs text-[#5C5855]">Response time: {status.responseTime}ms</p>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant={status.status === 'operational' ? 'default' : status.status === 'error' ? 'destructive' : 'secondary'}>
+                      {status.status === 'checking' ? 'Checking...' : status.status === 'operational' ? 'Operational' : 'Error'}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => checkApiStatus(apiKeys[0].key)}
+                  disabled={apiStatuses[0].status === 'checking'}
+                >
+                  {apiStatuses[0].status === 'checking' ? 'Testing...' : 'Test Again'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Create New Key */}
         <Card>
