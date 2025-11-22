@@ -9,6 +9,7 @@ import AppBreadcrumb from './AppBreadcrumb'
 
 export default function NavigationWrapper() {
   const [user, setUser] = useState<User | null>(null)
+  const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free')
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -16,6 +17,20 @@ export default function NavigationWrapper() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      
+      // Fetch user plan
+      if (user) {
+        const { data: planData } = await supabase
+          .from('user_plans')
+          .select('plan')
+          .eq('user_id', user.id)
+          .single()
+        
+        if (planData) {
+          setUserPlan(planData.plan)
+        }
+      }
+      
       setLoading(false)
     }
 
@@ -36,7 +51,7 @@ export default function NavigationWrapper() {
   return (
     <>
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
-        <UpgradeButton />
+        <UpgradeButton currentPlan={userPlan} />
         <AuthButton />
       </div>
     </>
