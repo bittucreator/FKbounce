@@ -23,6 +23,7 @@ interface VerificationResult {
   dns: boolean
   smtp: boolean
   disposable: boolean
+  catch_all: boolean
   message: string
 }
 
@@ -529,6 +530,12 @@ export default function BulkVerifier() {
                           Disposable
                         </div>
                       </TableHead>
+                      <TableHead className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Server className="h-3 w-3" />
+                          Catch-All
+                        </div>
+                      </TableHead>
                       <TableHead>Message</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -572,6 +579,15 @@ export default function BulkVerifier() {
                         </TableCell>
                         <TableCell className="text-center">
                           {result.disposable ? (
+                            <Badge variant="outline">
+                              <AlertTriangle className="h-3 w-3" />
+                            </Badge>
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {result.catch_all ? (
                             <Badge variant="outline">
                               <AlertTriangle className="h-3 w-3" />
                             </Badge>

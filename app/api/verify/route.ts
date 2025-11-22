@@ -18,6 +18,7 @@ interface VerificationResult {
   dns: boolean
   smtp: boolean
   disposable: boolean
+  catch_all: boolean
   message: string
 }
 
@@ -65,6 +66,58 @@ function isDisposable(domain: string): boolean {
   return disposableDomains.includes(domain.toLowerCase())
 }
 
+async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise<boolean> {
+  if (!mxRecords || mxRecords.length === 0) {
+    return false
+  }
+
+  // Generate random email to test
+  const randomEmail = `random${Date.now()}${Math.random().toString(36).substring(7)}@${domain}`
+  
+  return new Promise((resolve) => {
+    const socket = net.createConnection(25, mxRecords[0].exchange)
+    let responses: string[] = []
+
+    socket.setTimeout(5000)
+
+    socket.on('connect', () => {
+      socket.write(`HELO verifier.com\r\n`)
+    })
+
+    socket.on('data', (data) => {
+      const response = data.toString()
+      responses.push(response)
+      
+      if (response.includes('220') && !responses.some(r => r.includes('MAIL FROM'))) {
+        socket.write(`MAIL FROM:<test@verifier.com>\r\n`)
+      } else if (response.includes('250') && responses.filter(r => r.includes('250')).length === 1) {
+        socket.write(`RCPT TO:<${randomEmail}>\r\n`)
+      } else if (response.includes('250') && responses.filter(r => r.includes('250')).length >= 2) {
+        // If random email is accepted, it's catch-all
+        socket.end()
+        resolve(true)
+      } else if (response.includes('550') || response.includes('551') || response.includes('553')) {
+        // Random email rejected = not catch-all
+        socket.end()
+        resolve(false)
+      }
+    })
+
+    socket.on('timeout', () => {
+      socket.destroy()
+      resolve(false)
+    })
+
+    socket.on('error', () => {
+      resolve(false)
+    })
+
+    socket.on('close', () => {
+      resolve(false)
+    })
+  })
+}
+
 async function verifyEmail(email: string): Promise<VerificationResult> {
   const result: VerificationResult = {
     email,
@@ -73,6 +126,7 @@ async function verifyEmail(email: string): Promise<VerificationResult> {
     dns: false,
     smtp: false,
     disposable: false,
+    catch_all: false,
     message: ''
   }
 
@@ -100,9 +154,15 @@ async function verifyEmail(email: string): Promise<VerificationResult> {
     }
 
     result.smtp = await checkSMTP(email, mxRecords)
+    result.catch_all = await checkCatchAll(domain, mxRecords)
     
     result.valid = result.syntax && result.dns
-    result.message = result.valid ? 'Email is valid' : 'Email verification failed'
+    
+    if (result.catch_all) {
+      result.message = 'Email domain accepts all addresses (catch-all)'
+    } else {
+      result.message = result.valid ? 'Email is valid' : 'Email verification failed'
+    }
     
   } catch (error) {
     result.message = 'DNS lookup failed'

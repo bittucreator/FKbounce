@@ -22,6 +22,7 @@ interface VerificationResult {
   dns: boolean
   smtp: boolean
   disposable: boolean
+  catch_all: boolean
   message: string
 }
 
@@ -328,6 +329,28 @@ export default function EmailVerifier() {
                       <span className="font-medium">Disposable</span>
                     </div>
                     {result.disposable ? (
+                      <Badge variant="outline">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Yes
+                      </Badge>
+                    ) : (
+                      <Badge>
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        No
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Server className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">Catch-All</span>
+                    </div>
+                    {result.catch_all ? (
                       <Badge variant="outline">
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         Yes
