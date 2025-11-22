@@ -15,32 +15,50 @@ const supabaseAdmin = createClient(
 );
 
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
-  const hmac = crypto.createHmac('sha256', secret);
-  const digest = hmac.update(payload).digest('hex');
-  // Prevent RangeError by checking buffer lengths
-  if (signature.length !== digest.length) {
+  try {
+    const hmac = crypto.createHmac('sha256', secret);
+    const digest = hmac.update(payload).digest('base64');
+    
+    // Prevent RangeError by checking buffer lengths
+    if (signature.length !== digest.length) {
+      return false;
+    }
+    
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
+  } catch (error) {
+    console.error('Signature verification error:', error);
     return false;
   }
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
 }
 
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.text();
-    const signature = req.headers.get('x-dodo-signature');
+    const webhookId = req.headers.get('webhook-id');
+    const webhookTimestamp = req.headers.get('webhook-timestamp');
+    const webhookSignature = req.headers.get('webhook-signature');
 
-    if (!signature) {
+    if (!webhookSignature || !webhookId || !webhookTimestamp) {
+      console.error('Missing webhook headers:', { webhookSignature, webhookId, webhookTimestamp });
       return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
     }
 
+    // Extract signature from versioned format (v1,<signature>)
+    const signatureParts = webhookSignature.split(',');
+    const signature = signatureParts.length > 1 ? signatureParts[1] : webhookSignature;
+
+    // Create signed content: webhook-id.webhook-timestamp.payload
+    const signedContent = `${webhookId}.${webhookTimestamp}.${payload}`;
+
     // Verify webhook signature
     const isValid = verifyWebhookSignature(
-      payload,
+      signedContent,
       signature,
       process.env.DODO_WEBHOOK_SECRET!
     );
 
     if (!isValid) {
+      console.error('Invalid signature. Expected format: webhook-id.webhook-timestamp.payload');
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
