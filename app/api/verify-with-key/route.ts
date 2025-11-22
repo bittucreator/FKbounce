@@ -5,6 +5,7 @@ import net from 'net'
 import emailValidator from 'email-validator'
 import { createClient } from '@supabase/supabase-js'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
+import { dnsCache } from '@/lib/dns-cache'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -96,10 +97,10 @@ async function verifyEmail(email: string): Promise<VerificationResult> {
   }
 
   try {
-    const mxRecords = await resolveMx(domain)
-    result.dns = mxRecords && mxRecords.length > 0
+    const mxRecords = await dnsCache.getMxRecords(domain)
+    result.dns = !!(mxRecords && mxRecords.length > 0)
     
-    if (!result.dns) {
+    if (!result.dns || !mxRecords) {
       result.message = 'No MX records found for domain'
       return result
     }

@@ -289,6 +289,10 @@ export default function SubscriptionPage() {
                   </li>
                   <li className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    API Access: 600 requests/minute
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
                     Priority support
                   </li>
                 </>
@@ -297,6 +301,18 @@ export default function SubscriptionPage() {
                   <li className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                     500 verifications per month
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    Basic verification (syntax, DNS, disposable)
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    7-day verification history
+                  </li>
+                  <li className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    API Access: 120 requests/minute
                   </li>
                   <li className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
