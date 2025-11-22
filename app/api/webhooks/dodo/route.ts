@@ -47,9 +47,9 @@ export async function POST(req: NextRequest) {
     const event = JSON.parse(payload);
     console.log('Received event:', event);
 
-    // Handle successful payment
-    if (event.type === 'checkout.completed') {
-      const { metadata, customer_id, subscription_id } = event.data;
+    // Handle successful payment or active subscription
+    if (event.type === 'subscription.active' || event.type === 'checkout.completed') {
+      const { metadata, customer, subscription_id, status, next_billing_date, created_at } = event.data;
       const { user_id, plan, billing_cycle } = metadata;
 
       if (!user_id || !plan || !billing_cycle) {
@@ -57,33 +57,25 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid metadata' }, { status: 400 });
       }
 
-      // Calculate plan expiration date
-      const now = new Date();
-      const expiresAt = new Date(now);
-      const periodEnd = new Date(now);
-      
-      if (billing_cycle === 'yearly') {
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-      } else {
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-      }
+      // Parse dates from Dodo's format
+      const currentPeriodStart = new Date(created_at || event.timestamp);
+      const currentPeriodEnd = new Date(next_billing_date);
+      const expiresAt = new Date(next_billing_date);
 
       // Create or update subscription record
       const { error: subError } = await supabaseAdmin
         .from('subscriptions')
         .upsert({
           user_id,
-          dodo_customer_id: customer_id,
+          dodo_customer_id: customer.customer_id,
           dodo_subscription_id: subscription_id,
-          dodo_checkout_id: event.data.id,
-          status: 'active',
+          dodo_checkout_id: subscription_id, // Using subscription_id as checkout may not be present
+          status: status || 'active',
           plan: 'pro',
           billing_cycle,
-          current_period_start: now.toISOString(),
-          current_period_end: periodEnd.toISOString(),
-          cancel_at_period_end: false,
+          current_period_start: currentPeriodStart.toISOString(),
+          current_period_end: currentPeriodEnd.toISOString(),
+          cancel_at_period_end: event.data.cancel_at_next_billing_date || false,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id',
