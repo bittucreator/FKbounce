@@ -3,6 +3,7 @@ import localFont from 'next/font/local'
 import './globals.css'
 import NavigationWrapper from '../components/NavigationWrapper'
 import { ThemeProvider } from '../components/ThemeProvider'
+import { Analytics } from '@vercel/analytics/react'
 
 const geist = localFont({
   src: '../node_modules/geist/dist/fonts/geist-sans/Geist-Regular.woff2',
@@ -41,6 +42,7 @@ export default function RootLayout({
         >
           <NavigationWrapper />
           {children}
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>

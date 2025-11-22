@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     const event = JSON.parse(payload);
+    console.log('Received event:', event);
 
     // Handle successful payment
     if (event.type === 'checkout.completed') {
@@ -106,6 +107,15 @@ export async function POST(req: NextRequest) {
 
       if (error) {
         console.error('Error updating user plan:', error);
+        console.log('Upsert payload:', {
+          user_id,
+          plan: 'pro',
+          verifications_limit: 1000000,
+          verifications_used: 0,
+          billing_cycle,
+          plan_expires_at: expiresAt.toISOString(),
+          updated_at: new Date().toISOString(),
+        });
         return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
       }
 
