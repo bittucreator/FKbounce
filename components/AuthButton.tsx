@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { LogOut, History, CreditCard, Key } from 'lucide-react'
+import { LogOut, History, CreditCard, Key, BarChart3 } from 'lucide-react'
 
 export default function AuthButton() {
   const [user, setUser] = useState<User | null>(null)
@@ -145,6 +145,10 @@ export default function AuthButton() {
         <DropdownMenuItem onClick={() => router.push('/history')}>
           <History className="mr-2 h-4 w-4" />
           <span>Verification History</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push('/analytics')}>
+          <BarChart3 className="mr-2 h-4 w-4" />
+          <span>Usage Analytics</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/api-keys')}>
           <Key className="mr-2 h-4 w-4" />
