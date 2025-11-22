@@ -23,6 +23,9 @@ interface VerificationResult {
 
 interface BulkVerificationResponse {
   total: number
+  unique: number
+  duplicates: number
+  duplicateEmails: string[]
   valid: number
   invalid: number
   results: VerificationResult[]
@@ -218,33 +221,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Detect duplicates in current batch
+    const emailSet = new Set<string>()
+    const duplicates: string[] = []
+    const uniqueEmails: string[] = []
+    
+    emails.forEach((email: string) => {
+      const normalizedEmail = email.toLowerCase().trim()
+      if (emailSet.has(normalizedEmail)) {
+        duplicates.push(email)
+      } else {
+        emailSet.add(normalizedEmail)
+        uniqueEmails.push(email)
+      }
+    })
+
     const results = await Promise.all(
-      emails.map(email => verifyEmail(email))
+      uniqueEmails.map(email => verifyEmail(email))
     )
 
     const response: BulkVerificationResponse = {
-      total: results.length,
+      total: emails.length,
+      unique: uniqueEmails.length,
+      duplicates: duplicates.length,
+      duplicateEmails: duplicates,
       valid: results.filter(r => r.valid).length,
       invalid: results.filter(r => !r.valid).length,
       results
     }
 
-    // Save to history and increment usage count
+    // Save to history and increment usage count (only unique emails)
     try {
       await supabase.from('verification_history').insert({
         user_id: user.id,
         verification_type: 'bulk',
-        email_count: response.total,
+        email_count: uniqueEmails.length,
         valid_count: response.valid,
         invalid_count: response.invalid,
         results: results
       })
 
-      // Increment verification count
+      // Increment verification count (only unique emails)
       await supabase
         .from('user_plans')
         .update({ 
-          verifications_used: (userPlan?.verifications_used || 0) + response.total,
+          verifications_used: (userPlan?.verifications_used || 0) + uniqueEmails.length,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)

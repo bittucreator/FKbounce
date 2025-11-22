@@ -226,9 +226,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify all emails
+    // Detect duplicates in current batch
+    const emailSet = new Set<string>()
+    const duplicates: string[] = []
+    const uniqueEmails: string[] = []
+    
+    emails.forEach((email: string) => {
+      const normalizedEmail = email.toLowerCase().trim()
+      if (emailSet.has(normalizedEmail)) {
+        duplicates.push(email)
+      } else {
+        emailSet.add(normalizedEmail)
+        uniqueEmails.push(email)
+      }
+    })
+
+    // Verify unique emails only
     const results = await Promise.all(
-      emails.map(email => verifyEmail(email))
+      uniqueEmails.map(email => verifyEmail(email))
     )
 
     const validCount = results.filter(r => r.valid).length
@@ -239,17 +254,17 @@ export async function POST(request: NextRequest) {
       await supabaseAdmin.from('verification_history').insert({
         user_id: userId,
         verification_type: 'bulk',
-        email_count: emails.length,
+        email_count: uniqueEmails.length,
         valid_count: validCount,
         invalid_count: invalidCount,
         results: results
       })
 
-      // Increment verification count
+      // Increment verification count (only unique emails)
       await supabaseAdmin
         .from('user_plans')
         .update({ 
-          verifications_used: (userPlan?.verifications_used || 0) + emails.length,
+          verifications_used: (userPlan?.verifications_used || 0) + uniqueEmails.length,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', userId)
@@ -259,6 +274,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       total: emails.length,
+      unique: uniqueEmails.length,
+      duplicates: duplicates.length,
+      duplicateEmails: duplicates,
       valid: validCount,
       invalid: invalidCount,
       results

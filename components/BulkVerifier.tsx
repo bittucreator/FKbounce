@@ -20,6 +20,9 @@ interface VerificationResult {
 
 interface BulkVerificationResponse {
   total: number
+  unique?: number
+  duplicates?: number
+  duplicateEmails?: string[]
   valid: number
   invalid: number
   results: VerificationResult[]
@@ -327,6 +330,35 @@ export default function BulkVerifier() {
                   </CardContent>
                 </Card>
               </div>
+
+              {results.duplicates && results.duplicates > 0 && (
+                <Card className="mb-6 border-yellow-500 bg-yellow-50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-semibold text-yellow-900">Duplicate Emails Detected</p>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          Found <strong>{results.duplicates}</strong> duplicate email{results.duplicates > 1 ? 's' : ''} in your list. 
+                          Only <strong>{results.unique || 0}</strong> unique email{(results.unique || 0) > 1 ? 's were' : ' was'} verified.
+                        </p>
+                        {results.duplicateEmails && results.duplicateEmails.length > 0 && (
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-sm font-medium text-yellow-800 hover:underline">
+                              View duplicate emails
+                            </summary>
+                            <div className="mt-2 p-2 bg-white rounded border border-yellow-200 max-h-32 overflow-y-auto">
+                              <p className="text-xs font-mono text-yellow-900">
+                                {results.duplicateEmails.join(', ')}
+                              </p>
+                            </div>
+                          </details>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="flex gap-2">
                 <Button
