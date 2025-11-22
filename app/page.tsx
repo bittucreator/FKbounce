@@ -55,17 +55,33 @@ export default function Home() {
 
   if (!user) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-[#eeeeee] relative px-4">
-        {/* Desktop floating feature cards */}
-        <div className="hidden xl:block absolute left-8 top-1/2 -translate-y-1/2 w-80 z-10">
-          <div className="bg-white shadow-lg p-6 mb-10 border border-[#ececec]">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-[#eeeeee] relative px-4 overflow-hidden">
+        {/* Desktop floating feature cards - scattered asymmetrically */}
+        {/* Top Left */}
+        <div className="hidden xl:block absolute left-12 top-20 w-80 z-10">
+          <div className="bg-white shadow-lg p-6 border border-[#ececec] h-[140px] rotate-[-2deg]">
             <div className="flex items-center gap-3 mb-3">
               <img src="/Mail.svg" alt="Single" className="h-7 w-7" />
               <span className="font-mono text-lg font-semibold text-[#020202]">Single Verification</span>
             </div>
             <p className="text-sm text-[#5C5855] leading-relaxed">Instantly check if an email address is valid, disposable, or risky.</p>
           </div>
-          <div className="bg-white shadow-lg p-6 border border-[#ececec]">
+        </div>
+        
+        {/* Top Right */}
+        <div className="hidden xl:block absolute right-16 top-32 w-80 z-10">
+          <div className="bg-white shadow-lg p-6 border border-[#ececec] h-[140px] rotate-[3deg]">
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/pro.svg" alt="Pro" className="h-7 w-7" />
+              <span className="font-mono text-lg font-semibold text-[#020202]">Pro Plan</span>
+            </div>
+            <p className="text-sm text-[#5C5855] leading-relaxed">1,000,000 verifications/month, priority support, and more.</p>
+          </div>
+        </div>
+        
+        {/* Left Middle */}
+        <div className="hidden xl:block absolute left-8 top-1/2 -translate-y-1/2 w-80 z-10">
+          <div className="bg-white shadow-lg p-6 border border-[#ececec] h-[140px] rotate-[1deg]">
             <div className="flex items-center gap-3 mb-3">
               <img src="/bulk emails.svg" alt="Bulk" className="h-7 w-7" />
               <span className="font-mono text-lg font-semibold text-[#020202]">Bulk Verification</span>
@@ -73,20 +89,37 @@ export default function Home() {
             <p className="text-sm text-[#5C5855] leading-relaxed">Upload a CSV or paste up to 1,000,000 emails for fast batch validation.</p>
           </div>
         </div>
-        <div className="hidden xl:block absolute right-8 top-1/2 -translate-y-1/2 w-80 z-10">
-          <div className="bg-white shadow-lg p-6 mb-10 border border-[#ececec]">
-            <div className="flex items-center gap-3 mb-3">
-              <img src="/pro.svg" alt="Pro" className="h-7 w-7" />
-              <span className="font-mono text-lg font-semibold text-[#020202]">Pro Plan</span>
-            </div>
-            <p className="text-sm text-[#5C5855] leading-relaxed">Upgrade for 1,000,000 verifications/month, priority support, and more.</p>
-          </div>
-          <div className="bg-white shadow-lg p-6 border border-[#ececec]">
+        
+        {/* Right Middle */}
+        <div className="hidden xl:block absolute right-12 top-1/2 translate-y-12 w-80 z-10">
+          <div className="bg-white shadow-lg p-6 border border-[#ececec] h-[140px] rotate-[-1deg]">
             <div className="flex items-center gap-3 mb-3">
               <img src="/csv-upload.svg" alt="CSV" className="h-7 w-7" />
               <span className="font-mono text-lg font-semibold text-[#020202]">CSV Upload</span>
             </div>
             <p className="text-sm text-[#5C5855] leading-relaxed">Drag & drop your CSV file for instant bulk email checks.</p>
+          </div>
+        </div>
+        
+        {/* Bottom Left */}
+        <div className="hidden xl:block absolute left-20 bottom-24 w-80 z-10">
+          <div className="bg-white shadow-lg p-6 border border-[#ececec] h-[140px] rotate-[2deg]">
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/graph.svg" alt="Analytics" className="h-7 w-7" />
+              <span className="font-mono text-lg font-semibold text-[#020202]">Analytics</span>
+            </div>
+            <p className="text-sm text-[#5C5855] leading-relaxed">Track your verification history, usage stats, and monitor email quality trends.</p>
+          </div>
+        </div>
+        
+        {/* Bottom Right */}
+        <div className="hidden xl:block absolute right-20 bottom-32 w-80 z-10">
+          <div className="bg-white shadow-lg p-6 border border-[#ececec] h-[140px] rotate-[-3deg]">
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/lock.svg" alt="API" className="h-7 w-7" />
+              <span className="font-mono text-lg font-semibold text-[#020202]">API Access</span>
+            </div>
+            <p className="text-sm text-[#5C5855] leading-relaxed">Integrate email verification into your apps with our RESTful API.</p>
           </div>
         </div>
         
@@ -108,6 +141,15 @@ export default function Home() {
                 <div className="text-left">
                   <span className="font-mono text-sm font-semibold text-[#020202] block mb-1">Bulk Verification</span>
                   <p className="text-xs text-[#5C5855] leading-relaxed">Upload a CSV or paste up to 1,000,000 emails for fast batch validation.</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white shadow-lg p-4 border border-[#ececec]">
+              <div className="flex items-start gap-3">
+                <img src="/graph.svg" alt="Analytics" className="h-6 w-6 mt-1" />
+                <div className="text-left">
+                  <span className="font-mono text-sm font-semibold text-[#020202] block mb-1">Analytics</span>
+                  <p className="text-xs text-[#5C5855] leading-relaxed">Track your verification history, usage stats, and monitor email quality trends.</p>
                 </div>
               </div>
             </div>
@@ -155,6 +197,15 @@ export default function Home() {
                 <div className="text-left">
                   <span className="font-mono text-sm font-semibold text-[#020202] block mb-1">CSV Upload</span>
                   <p className="text-xs text-[#5C5855] leading-relaxed">Drag & drop your CSV file for instant bulk email checks.</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white shadow-lg p-4 border border-[#ececec]">
+              <div className="flex items-start gap-3">
+                <img src="/lock.svg" alt="API" className="h-6 w-6 mt-1" />
+                <div className="text-left">
+                  <span className="font-mono text-sm font-semibold text-[#020202] block mb-1">API Access</span>
+                  <p className="text-xs text-[#5C5855] leading-relaxed">Integrate email verification into your apps with our RESTful API.</p>
                 </div>
               </div>
             </div>
