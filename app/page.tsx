@@ -171,7 +171,7 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <button onClick={() => window.location.href = '/'} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <img src="/Logo-black.png" alt="FKbounce" className="h-7 w-auto" />
-              <h1 className="text-2xl font-[family-name:var(--font-geist)] text-[#020202]">
+              <h1 className="text-[1.2rem] font-[family-name:var(--font-geist)] text-[#020202]">
                 FKbounce
               </h1>
             </button>
