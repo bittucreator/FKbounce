@@ -103,31 +103,6 @@ export default function EmailVerifier() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {usage && (
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Verifications Used</p>
-                <p className="text-2xl font-bold">
-                  {usage.used.toLocaleString()} / {usage.limit.toLocaleString()}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-muted-foreground">Remaining</p>
-                <p className="text-2xl font-bold text-green-600">{usage.remaining.toLocaleString()}</p>
-              </div>
-            </div>
-            <div className="mt-4 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300"
-                style={{ width: `${(usage.used / usage.limit) * 100}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      )}
-      
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
