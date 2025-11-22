@@ -18,19 +18,9 @@ export default function AppBreadcrumb() {
   // Split pathname into segments and filter out empty strings
   const segments = pathname.split('/').filter(Boolean)
   
-  // If we're on the home page, just show Home
+  // If we're on the home page, don't show breadcrumb
   if (segments.length === 0) {
-    return (
-      <Breadcrumb>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbPage>
-              <Home className="h-4 w-4" />
-            </BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-    )
+    return null
   }
   
   // Build breadcrumb items
@@ -53,7 +43,7 @@ export default function AppBreadcrumb() {
         <BreadcrumbItem>
           <BreadcrumbLink asChild>
             <Link href="/">
-              <Home className="h-4 w-4" />
+              <img src="/home.svg" alt="Home" className="h-6 w-6" />
             </Link>
           </BreadcrumbLink>
         </BreadcrumbItem>

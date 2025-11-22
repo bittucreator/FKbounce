@@ -4,7 +4,7 @@ export default function PaymentSuccessPage() {
       <div className="max-w-md w-full text-center space-y-4">
         <div className="w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto">
           <svg
-            className="w-8 h-8 text-green-600 dark:text-green-400"
+            className="w-6 h-6 text-green-600 dark:text-green-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

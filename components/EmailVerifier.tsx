@@ -102,7 +102,7 @@ export default function EmailVerifier() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -131,7 +131,7 @@ export default function EmailVerifier() {
             <Button 
               type="submit" 
               disabled={loading}
-              className="w-full"
+              className="w-full items-center justify-center flex gap-0"
             >
               {loading ? (
                 <>
@@ -140,8 +140,8 @@ export default function EmailVerifier() {
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Verify Email
+                  <img src="/check.svg" alt="Verify" className="mr-2 h-6 w-6 brightness-0 invert" />
+                  Verify now
                 </>
               )}
             </Button>
@@ -190,7 +190,7 @@ export default function EmailVerifier() {
                   </>
                 ) : (
                   <>
-                    <Copy className="h-4 w-4" />
+                    <img src="/Copy.svg" alt="Copy" className="mr-1 h-4 w-4" />
                     Copy
                   </>
                 )}

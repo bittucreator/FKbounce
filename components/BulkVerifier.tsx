@@ -194,7 +194,7 @@ export default function BulkVerifier() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -207,7 +207,7 @@ export default function BulkVerifier() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <div className="flex gap-2 mb-4">
+              <div className="flex gap- mb-4">
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -219,9 +219,9 @@ export default function BulkVerifier() {
                   type="button"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full"
+                  className="w-full items-center justify-center flex gap-0"
                 >
-                  <Upload className="mr-2 h-4 w-4" />
+                  <img src="/csv-upload.svg" alt="Upload" className="mr-2 h-6 w-6" />
                   Upload CSV File
                 </Button>
               </div>
@@ -261,7 +261,7 @@ export default function BulkVerifier() {
             <Button 
               type="submit" 
               disabled={loading}
-              className="w-full"
+              className="w-full items-center justify-center flex gap-0"
             >
               {loading ? (
                 <>
@@ -270,8 +270,8 @@ export default function BulkVerifier() {
                 </>
               ) : (
                 <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Verify All Emails
+                  <img src="/check.svg" alt="Verify" className="mr-1 h-6 w-6 brightness-0 invert" />
+                  Verify now
                 </>
               )}
             </Button>
@@ -295,8 +295,8 @@ export default function BulkVerifier() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Verification Summary
+                <img src="/shield.svg" alt="Shield" className="h-5 w-5" />
+                Verification
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -350,7 +350,7 @@ export default function BulkVerifier() {
                     </>
                   ) : (
                     <>
-                      <Copy className="mr-2 h-4 w-4" />
+                      <img src="/Copy.svg" alt="Copy" className="mr-1 h-4 w-4" />
                       Copy Valid Emails
                     </>
                   )}
@@ -361,7 +361,7 @@ export default function BulkVerifier() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Detailed Results</CardTitle>
+              <CardTitle>Results</CardTitle>
               <CardDescription>
                 Complete verification details for all {results.total} email addresses
               </CardDescription>

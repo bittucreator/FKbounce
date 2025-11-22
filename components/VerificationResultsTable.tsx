@@ -28,7 +28,7 @@ interface VerificationResultsTableProps {
 
 export default function VerificationResultsTable({ results }: VerificationResultsTableProps) {
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const itemsPerPage = 25
   const totalPages = Math.ceil(results.length / itemsPerPage)
   
   const startIndex = (currentPage - 1) * itemsPerPage
@@ -46,45 +46,45 @@ export default function VerificationResultsTable({ results }: VerificationResult
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Syntax</TableHead>
-            <TableHead>DNS</TableHead>
-            <TableHead>SMTP</TableHead>
-            <TableHead>Disposable</TableHead>
-            <TableHead>Message</TableHead>
+            <TableHead className="text-left">Email</TableHead>
+            <TableHead className="text-left">Status</TableHead>
+            <TableHead className="text-left">Syntax</TableHead>
+            <TableHead className="text-left">DNS</TableHead>
+            <TableHead className="text-left">SMTP</TableHead>
+            <TableHead className="text-left">Disposable</TableHead>
+            <TableHead className="text-left">Message</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {currentResults.map((result, idx) => (
             <TableRow key={idx}>
-              <TableCell className="font-mono text-sm">{result.email}</TableCell>
-              <TableCell>
+              <TableCell className="font-mono text-sm text-left">{result.email}</TableCell>
+              <TableCell className="text-left">
                 <Badge variant={result.valid ? 'default' : 'destructive'}>
                   {result.valid ? 'Valid' : 'Invalid'}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-left">
                 <Badge variant={result.syntax ? 'default' : 'secondary'}>
                   {result.syntax ? '✓' : '✗'}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-left">
                 <Badge variant={result.dns ? 'default' : 'secondary'}>
                   {result.dns ? '✓' : '✗'}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-left">
                 <Badge variant={result.smtp ? 'default' : 'secondary'}>
                   {result.smtp ? '✓' : '✗'}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="text-left">
                 <Badge variant={result.disposable ? 'destructive' : 'secondary'}>
                   {result.disposable ? 'Yes' : 'No'}
                 </Badge>
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">{result.message}</TableCell>
+              <TableCell className="text-sm text-muted-foreground text-left">{result.message}</TableCell>
             </TableRow>
           ))}
         </TableBody>

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import VerificationResultsTable from '@/components/VerificationResultsTable'
+import AppBreadcrumb from '@/components/AppBreadcrumb'
 import {
   Pagination,
   PaginationContent,
@@ -96,13 +97,30 @@ export default function HistoryPage() {
   }
 
   return (
-    <div className="container text-center mx-auto py-20 px-4">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#020202] mb-2">Verification History</h1>
-        <p className="text-[#5C5855] font-mono">
-          View your past email verification results ({totalCount} total)
-        </p>
-      </div>
+    <>
+      <header className="border-b bg-[#eeeeee]">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img src="/Logo-black.png" alt="FKbounce" className="h-7 w-auto" />
+              <h1 className="text-2xl font-[family-name:var(--font-geist)] text-[#020202]">
+                FKbounce
+              </h1>
+            </button>
+            <div className="ml-4">
+              <AppBreadcrumb />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="container text-center mx-auto py-10 px-4">
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-[#020202] mb-2">Verification History</h2>
+          <p className="text-[#5C5855] font-mono">
+            View your past email verification results ({totalCount} total)
+          </p>
+        </div>
 
       {history.length === 0 ? (
         <Card>
@@ -116,8 +134,8 @@ export default function HistoryPage() {
             {history.map((item) => (
             <Card key={item.id}>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-start justify-between">
+                  <div className="text-left space-y-2">
                     <CardTitle className="text-[#020202]">
                       {item.verification_type === 'single' ? 'Single Email Verification' : 'Bulk Email Verification'}
                     </CardTitle>
@@ -196,6 +214,7 @@ export default function HistoryPage() {
           )}
         </>
       )}
-    </div>
+      </div>
+    </>
   )
 }

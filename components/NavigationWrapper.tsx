@@ -35,9 +35,6 @@ export default function NavigationWrapper() {
 
   return (
     <>
-      <div className="fixed top-4 left-4 z-50">
-        <AppBreadcrumb />
-      </div>
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
         <UpgradeButton />
         <AuthButton />

@@ -5,6 +5,7 @@ import { createClient } from '../lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import EmailVerifier from '../components/EmailVerifier'
 import BulkVerifier from '../components/BulkVerifier'
+import AppBreadcrumb from '../components/AppBreadcrumb'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
@@ -84,26 +85,31 @@ export default function Home() {
   return (
     <main className="min-h-screen flex flex-col">
       <header className="border-b bg-[#eeeeee]">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center gap-2">
-            <img src="/Logo-black.png" alt="FKbounce" className="h-7 w-auto" />
-            <h1 className="text-2xl font-[family-name:var(--font-geist)] text-[#020202]">
-              FKbounce
-            </h1>
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => window.location.href = '/'} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img src="/Logo-black.png" alt="FKbounce" className="h-7 w-auto" />
+              <h1 className="text-2xl font-[family-name:var(--font-geist)] text-[#020202]">
+                FKbounce
+              </h1>
+            </button>
+            <div className="ml-1">
+              <AppBreadcrumb />
+            </div>
           </div>
         </div>
       </header>
 
       <div className="flex-1 container mx-auto px-4 py-10">
         <Tabs defaultValue="single" className="w-full max-w-6xl mx-auto">
-          <TabsList className="grid w-full grid-cols-2 mb-8">
-            <TabsTrigger value="single">
-              <Mail className="h-4 w-4 mr-2" />
-              Single Verification
+          <TabsList className="grid w-full grid-cols-2 mb-8 h-fit max-w-xs mx-auto rounded-[8px]">
+            <TabsTrigger value="single" className="text-sm rounded-[8px] flex items-center justify-center">
+              <img src="/Mail.svg" alt="" className="h-6 w-6 mr-1.5" />
+              Single
             </TabsTrigger>
-            <TabsTrigger value="bulk">
-              <Shield className="h-4 w-4 mr-2" />
-              Bulk Verification
+            <TabsTrigger value="bulk" className="text-sm rounded-[8px] flex items-center justify-center">
+              <img src="/bulk emails.svg" alt="" className="h-6 w-6 mr-1.5" />
+              Bulk
             </TabsTrigger>
           </TabsList>
           
