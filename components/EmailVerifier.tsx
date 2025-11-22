@@ -5,7 +5,15 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
-import { CheckCircle2, XCircle, Loader2, Mail, Server, Database, AlertTriangle, Copy, Check } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Mail, Server, Database, AlertTriangle, Copy, Check, FolderPlus } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog'
 
 interface VerificationResult {
   email: string
@@ -24,10 +32,26 @@ export default function EmailVerifier() {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
   const [usage, setUsage] = useState<{ used: number; limit: number; remaining: number } | null>(null)
+  const [lists, setLists] = useState<any[]>([])
+  const [isListDialogOpen, setIsListDialogOpen] = useState(false)
+  const [savingToList, setSavingToList] = useState(false)
 
   useEffect(() => {
     fetchUsage()
+    fetchLists()
   }, [])
+
+  const fetchLists = async () => {
+    try {
+      const response = await fetch('/api/lists')
+      if (response.ok) {
+        const data = await response.json()
+        setLists(data.lists || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch lists:', err)
+    }
+  }
 
   const fetchUsage = async () => {
     try {
@@ -60,6 +84,36 @@ export default function EmailVerifier() {
     await navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const saveToList = async (listId: string) => {
+    if (!result) return
+
+    setSavingToList(true)
+    try {
+      const response = await fetch(`/api/lists/${listId}/emails`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emails: [{
+            email_address: result.email,
+            verification_status: result.valid ? 'valid' : 'invalid',
+            verification_result: result
+          }]
+        })
+      })
+
+      if (response.ok) {
+        setIsListDialogOpen(false)
+        // Show success feedback
+        alert('Email added to list successfully!')
+      }
+    } catch (err) {
+      console.error('Failed to save to list:', err)
+      alert('Failed to add email to list')
+    } finally {
+      setSavingToList(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -306,6 +360,51 @@ export default function EmailVerifier() {
                 </div>
               </CardContent>
             </Card>
+
+            <div className="flex gap-2">
+              <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="flex-1">
+                    <FolderPlus className="h-4 w-4 mr-2" />
+                    Save to List
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Save to List</DialogTitle>
+                    <DialogDescription>
+                      Choose a list to save this verified email
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {lists.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        No lists found. Create a list in the Lists tab first.
+                      </p>
+                    ) : (
+                      lists.map((list: any) => (
+                        <Button
+                          key={list.id}
+                          variant="outline"
+                          className="w-full justify-start"
+                          onClick={() => saveToList(list.id)}
+                          disabled={savingToList}
+                        >
+                          <div
+                            className="w-3 h-3 rounded-full mr-2"
+                            style={{ backgroundColor: list.color }}
+                          />
+                          {list.name}
+                          <Badge variant="secondary" className="ml-auto">
+                            {list.email_count || 0}
+                          </Badge>
+                        </Button>
+                      ))
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardContent>
         </Card>
       )}

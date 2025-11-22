@@ -1,12 +1,20 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '../components/ui/button'
 import { Textarea } from '../components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
-import { CheckCircle2, XCircle, Loader2, Download, Shield, AlertTriangle, Mail, Database, Server, Upload, Copy, Check } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Download, Shield, AlertTriangle, Mail, Database, Server, Upload, Copy, Check, FolderPlus } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../components/ui/dialog'
 
 interface VerificationResult {
   email: string
@@ -35,7 +43,26 @@ export default function BulkVerifier() {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [lists, setLists] = useState<any[]>([])
+  const [isListDialogOpen, setIsListDialogOpen] = useState(false)
+  const [savingToList, setSavingToList] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetchLists()
+  }, [])
+
+  const fetchLists = async () => {
+    try {
+      const response = await fetch('/api/lists')
+      if (response.ok) {
+        const data = await response.json()
+        setLists(data.lists || [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch lists:', err)
+    }
+  }
 
   // Auto-correct emails: remove spaces and fix common typos
   const autocorrectEmails = (value: string) => {
@@ -53,6 +80,36 @@ export default function BulkVerifier() {
     await navigator.clipboard.writeText(validEmails)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const saveToList = async (listId: string) => {
+    if (!results) return
+
+    setSavingToList(true)
+    try {
+      const emailsToSave = results.results.map(result => ({
+        email_address: result.email,
+        verification_status: result.valid ? 'valid' : 'invalid',
+        verification_result: result
+      }))
+
+      const response = await fetch(`/api/lists/${listId}/emails`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails: emailsToSave })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setIsListDialogOpen(false)
+        alert(`Successfully added ${data.added} emails to list!`)
+      }
+    } catch (err) {
+      console.error('Failed to save to list:', err)
+      alert('Failed to add emails to list')
+    } finally {
+      setSavingToList(false)
+    }
   }
 
   // Drag and drop handlers
@@ -360,32 +417,76 @@ export default function BulkVerifier() {
                 </Card>
               )}
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={downloadResults}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download CSV
-                </Button>
-                <Button
-                  onClick={copyToClipboard}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <img src="/Copy.svg" alt="Copy" className="mr-1 h-4 w-4" />
-                      Copy Valid Emails
-                    </>
-                  )}
-                </Button>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    onClick={downloadResults}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download CSV
+                  </Button>
+                  <Button
+                    onClick={copyToClipboard}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="mr-2 h-4 w-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <img src="/Copy.svg" alt="Copy" className="mr-1 h-4 w-4" />
+                        Copy Valid Emails
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <FolderPlus className="h-4 w-4 mr-2" />
+                      Save All to List ({results.total} emails)
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Save to List</DialogTitle>
+                      <DialogDescription>
+                        Choose a list to save all {results.total} verified emails
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                      {lists.length === 0 ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">
+                          No lists found. Create a list in the Lists tab first.
+                        </p>
+                      ) : (
+                        lists.map((list: any) => (
+                          <Button
+                            key={list.id}
+                            variant="outline"
+                            className="w-full justify-start"
+                            onClick={() => saveToList(list.id)}
+                            disabled={savingToList}
+                          >
+                            <div
+                              className="w-3 h-3 rounded-full mr-2"
+                              style={{ backgroundColor: list.color }}
+                            />
+                            {list.name}
+                            <Badge variant="secondary" className="ml-auto">
+                              {list.email_count || 0}
+                            </Badge>
+                          </Button>
+                        ))
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardContent>
           </Card>

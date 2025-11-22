@@ -5,6 +5,7 @@ import { createClient } from '../lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import EmailVerifier from '../components/EmailVerifier'
 import BulkVerifier from '../components/BulkVerifier'
+import SmartLists from '../components/SmartLists'
 import AppBreadcrumb from '../components/AppBreadcrumb'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -250,7 +251,7 @@ export default function Home() {
 
       <div className="flex-1 container mx-auto px-4 py-10">
         <Tabs defaultValue="single" className="w-full max-w-6xl mx-auto">
-          <TabsList className="grid w-full grid-cols-2 mb-8 h-fit max-w-xs mx-auto rounded-[8px]">
+          <TabsList className="grid w-full grid-cols-2 mb-8 h-fit max-w-lg mx-auto rounded-[8px]">
             <TabsTrigger value="single" className="text-sm rounded-[8px] flex items-center justify-center">
               <img src="/Mail.svg" alt="" className="h-6 w-6 mr-1.5" />
               Single
@@ -270,21 +271,6 @@ export default function Home() {
           </TabsContent>
         </Tabs>
       </div>
-      
-      {/* Footer */}
-      <footer className="w-full py-6 px-4 border-t border-[#ececec] bg-white mt-auto">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-[#5C5855]">
-          <p className="font-mono">© 2025 FKBounce</p>
-          <div className="flex items-center gap-4">
-            <a href="/privacy" className="hover:text-[#020202] transition-colors font-mono">
-              Privacy Policy
-            </a>
-            <a href="/terms" className="hover:text-[#020202] transition-colors font-mono">
-              Terms of Service
-            </a>
-          </div>
-        </div>
-      </footer>
     </main>
   )
 }
