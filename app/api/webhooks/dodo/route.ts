@@ -16,23 +16,32 @@ const supabaseAdmin = createClient(
 
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
   try {
-    // Remove the 'whsec_' prefix from the secret if present
-    const cleanSecret = secret.startsWith('whsec_') ? secret.substring(6) : secret;
+    // Remove the 'whsec_' prefix and decode from base64
+    const base64Secret = secret.startsWith('whsec_') ? secret.substring(6) : secret;
+    const decodedSecret = Buffer.from(base64Secret, 'base64');
     
-    const hmac = crypto.createHmac('sha256', cleanSecret);
-    const digest = hmac.update(payload).digest('base64');
+    console.log('Base64 secret length:', base64Secret.length);
+    console.log('Decoded secret length:', decodedSecret.length);
+    
+    const hmac = crypto.createHmac('sha256', decodedSecret);
+    const digest = hmac.update(payload, 'utf8').digest('base64');
     
     console.log('Computed digest:', digest);
     console.log('Received signature:', signature);
     console.log('Signatures match:', digest === signature);
     
-    // Prevent RangeError by checking buffer lengths
-    if (signature.length !== digest.length) {
-      console.log('Length mismatch:', { signatureLength: signature.length, digestLength: digest.length });
-      return false;
+    // Use simple comparison first
+    if (digest === signature) {
+      return true;
     }
     
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
+    // Fallback to timing-safe comparison if lengths match
+    if (signature.length === digest.length) {
+      return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
+    }
+    
+    console.log('Length mismatch:', { signatureLength: signature.length, digestLength: digest.length });
+    return false;
   } catch (error) {
     console.error('Signature verification error:', error);
     return false;
