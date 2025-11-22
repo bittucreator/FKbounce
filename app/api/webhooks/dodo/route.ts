@@ -17,6 +17,10 @@ const supabaseAdmin = createClient(
 function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
   const hmac = crypto.createHmac('sha256', secret);
   const digest = hmac.update(payload).digest('hex');
+  // Prevent RangeError by checking buffer lengths
+  if (signature.length !== digest.length) {
+    return false;
+  }
   return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
 }
 
