@@ -50,6 +50,8 @@ interface Analytics {
     total_valid: number
     total_invalid: number
     valid_rate: number
+    single_verifications: number
+    bulk_verifications: number
     active_api_keys: number
     active_webhooks: number
   }
