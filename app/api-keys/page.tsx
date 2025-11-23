@@ -11,6 +11,8 @@ import { Separator } from '../../components/ui/separator'
 import { ArrowLeft, Key, Copy, Eye, EyeOff, Trash2, Plus, Code, Book, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/ui/accordion'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { CodeBlock } from '../../components/ui/code-block'
 
 interface ApiKey {
   id: string
@@ -26,6 +28,33 @@ interface ApiStatus {
   responseTime?: number
 }
 
+interface Webhook {
+  id: string
+  url: string
+  secret: string
+  events: string[]
+  is_active: boolean
+  created_at: string
+}
+
+interface Analytics {
+  period: string
+  plan: {
+    type: string
+    verifications_used: number
+    verifications_limit: number
+    usage_percentage: number
+  }
+  summary: {
+    total_verifications: number
+    total_valid: number
+    total_invalid: number
+    valid_rate: number
+    active_api_keys: number
+    active_webhooks: number
+  }
+}
+
 export default function ApiKeysPage() {
   const [loading, setLoading] = useState(true)
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([])
@@ -38,11 +67,18 @@ export default function ApiKeysPage() {
     { endpoint: 'Single Email Verification', status: 'checking' },
     { endpoint: 'Bulk Email Verification', status: 'checking' }
   ])
+  const [webhooks, setWebhooks] = useState<Webhook[]>([])
+  const [newWebhookUrl, setNewWebhookUrl] = useState('')
+  const [creatingWebhook, setCreatingWebhook] = useState(false)
+  const [analytics, setAnalytics] = useState<Analytics | null>(null)
+  const [activeTab, setActiveTab] = useState('keys')
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     loadApiKeys()
+    loadWebhooks()
+    loadAnalytics()
   }, [])
 
   const checkApiStatus = async (apiKey: string) => {
@@ -206,6 +242,92 @@ export default function ApiKeysPage() {
     return key.substring(0, 11) + '•'.repeat(20) + key.substring(key.length - 8)
   }
 
+  const loadWebhooks = async () => {
+    try {
+      const response = await fetch('/api/webhooks')
+      if (response.ok) {
+        const data = await response.json()
+        setWebhooks(data.webhooks || [])
+      }
+    } catch (error) {
+      console.error('Error loading webhooks:', error)
+    }
+  }
+
+  const handleCreateWebhook = async () => {
+    if (!newWebhookUrl.trim()) return
+
+    setCreatingWebhook(true)
+    try {
+      const response = await fetch('/api/webhooks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          url: newWebhookUrl,
+          events: ['bulk_verification_complete']
+        })
+      })
+
+      if (!response.ok) throw new Error('Failed to create webhook')
+
+      const data = await response.json()
+      alert(`Webhook created! Secret: ${data.webhook.secret}\n\nSave this secret securely - it will not be shown again.`)
+      setNewWebhookUrl('')
+      await loadWebhooks()
+    } catch (error) {
+      console.error('Error creating webhook:', error)
+      alert('Failed to create webhook')
+    } finally {
+      setCreatingWebhook(false)
+    }
+  }
+
+  const handleToggleWebhook = async (webhookId: string, isActive: boolean) => {
+    try {
+      const response = await fetch('/api/webhooks', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: webhookId, is_active: !isActive })
+      })
+
+      if (!response.ok) throw new Error('Failed to update webhook')
+
+      await loadWebhooks()
+    } catch (error) {
+      console.error('Error updating webhook:', error)
+      alert('Failed to update webhook')
+    }
+  }
+
+  const handleDeleteWebhook = async (webhookId: string) => {
+    if (!confirm('Are you sure you want to delete this webhook?')) return
+
+    try {
+      const response = await fetch(`/api/webhooks?id=${webhookId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) throw new Error('Failed to delete webhook')
+
+      await loadWebhooks()
+    } catch (error) {
+      console.error('Error deleting webhook:', error)
+      alert('Failed to delete webhook')
+    }
+  }
+
+  const loadAnalytics = async () => {
+    try {
+      const response = await fetch('/api/analytics?period=30d')
+      if (response.ok) {
+        const data = await response.json()
+        setAnalytics(data)
+      }
+    } catch (error) {
+      console.error('Error loading analytics:', error)
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
@@ -232,13 +354,24 @@ export default function ApiKeysPage() {
 
         <div>
           <h1 className="text-3xl font-bold text-[#020202] font-[family-name:var(--font-geist)]">
-            API Keys
+            API Management
           </h1>
           <p className="text-[#5C5855] mt-2 font-mono text-sm">
-            Create and manage API keys.
+            API Keys, Webhooks, Analytics & Documentation
           </p>
         </div>
 
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="keys">API Keys</TabsTrigger>
+            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="docs">Documentation</TabsTrigger>
+          </TabsList>
+
+          {/* API Keys Tab */}
+          <TabsContent value="keys" className="space-y-6">
         {/* Rate Limits Info */}
         <Alert>
           <Code className="h-4 w-4" />
@@ -399,6 +532,164 @@ export default function ApiKeysPage() {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          {/* Webhooks Tab */}
+          <TabsContent value="webhooks" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Webhook Configuration</CardTitle>
+                <CardDescription>
+                  Receive real-time notifications when bulk verifications complete
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://your-domain.com/webhook"
+                    value={newWebhookUrl}
+                    onChange={(e) => setNewWebhookUrl(e.target.value)}
+                  />
+                  <Button onClick={handleCreateWebhook} disabled={creatingWebhook || !newWebhookUrl.trim()}>
+                    {creatingWebhook ? 'Creating...' : 'Create'}
+                  </Button>
+                </div>
+                <p className="text-xs text-[#5C5855]">
+                  Webhooks will receive a POST request with the verification results and an HMAC signature for security.
+                </p>
+              </CardContent>
+            </Card>
+
+            {webhooks.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Active Webhooks</CardTitle>
+                  <CardDescription>{webhooks.length} webhook{webhooks.length > 1 ? 's' : ''} configured</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {webhooks.map((webhook) => (
+                      <div key={webhook.id} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <code className="text-sm font-mono bg-[#f5f5f5] px-2 py-1 rounded">
+                                {webhook.url}
+                              </code>
+                              <Badge variant={webhook.is_active ? 'default' : 'secondary'}>
+                                {webhook.is_active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-[#5C5855]">
+                              Events: {webhook.events.join(', ')}
+                            </p>
+                            <p className="text-xs text-[#5C5855] mt-1">
+                              Secret: {webhook.secret}
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleWebhook(webhook.id, webhook.is_active)}
+                            >
+                              {webhook.is_active ? 'Disable' : 'Enable'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteWebhook(webhook.id)}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            {analytics && (
+              <>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">Plan Usage</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{analytics.plan.usage_percentage}%</div>
+                      <p className="text-xs text-[#5C5855] mt-1">
+                        {analytics.plan.verifications_used.toLocaleString()} / {analytics.plan.verifications_limit.toLocaleString()} verifications
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">Valid Rate</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">{analytics.summary.valid_rate}%</div>
+                      <p className="text-xs text-[#5C5855] mt-1">
+                        {analytics.summary.total_valid.toLocaleString()} of {analytics.summary.total_verifications.toLocaleString()} emails
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm font-medium">Total Verifications</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{analytics.summary.total_verifications.toLocaleString()}</div>
+                      <p className="text-xs text-[#5C5855] mt-1">
+                        Last 30 days
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Activity Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-[#5C5855]">Single Verifications:</span>
+                          <span className="font-semibold">{analytics.summary.single_verifications}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-[#5C5855]">Bulk Verifications:</span>
+                          <span className="font-semibold">{analytics.summary.bulk_verifications}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-[#5C5855]">Active API Keys:</span>
+                          <span className="font-semibold">{analytics.summary.active_api_keys}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-[#5C5855]">Active Webhooks:</span>
+                          <span className="font-semibold">{analytics.summary.active_webhooks}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+
+          {/* Documentation Tab */}
+          <TabsContent value="docs" className="space-y-6">
 
         {/* API Documentation */}
         <Card>
@@ -417,9 +708,10 @@ export default function ApiKeysPage() {
                 <AccordionTrigger>Authentication</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-[#5C5855] mb-3">Include your API key in the request header:</p>
-                  <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-sm">
-                    Authorization: Bearer YOUR_API_KEY
-                  </code>
+                  <CodeBlock 
+                    code="Authorization: Bearer YOUR_API_KEY"
+                    language="http"
+                  />
                 </AccordionContent>
               </AccordionItem>
 
@@ -428,28 +720,32 @@ export default function ApiKeysPage() {
                 <AccordionContent className="space-y-4">
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Single Email Verification</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`POST https://www.fkbounce.com/api/verify-with-key
+                    <CodeBlock 
+                      code={`POST https://www.fkbounce.com/api/verify-with-key
 Content-Type: application/json
 Authorization: Bearer YOUR_API_KEY
 
 {
   "email": "user@example.com"
 }`}
-                    </code>
+                      language="http"
+                      title="Single Email Endpoint"
+                    />
                   </div>
                   <Separator />
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Bulk Email Verification (up to 1000)</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`POST https://www.fkbounce.com/api/verify-bulk-with-key
+                    <CodeBlock 
+                      code={`POST https://www.fkbounce.com/api/verify-bulk-with-key
 Content-Type: application/json
 Authorization: Bearer YOUR_API_KEY
 
 {
   "emails": ["user1@example.com", "user2@example.com"]
 }`}
-                    </code>
+                      language="http"
+                      title="Bulk Email Endpoint"
+                    />
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -458,8 +754,8 @@ Authorization: Bearer YOUR_API_KEY
                 <AccordionTrigger>Response Format</AccordionTrigger>
                 <AccordionContent>
                   <p className="text-sm text-[#5C5855] mb-3">Single email response:</p>
-                  <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`{
+                  <CodeBlock 
+                    code={`{
   "email": "user@example.com",
   "valid": true,
   "syntax": true,
@@ -468,10 +764,12 @@ Authorization: Bearer YOUR_API_KEY
   "disposable": false,
   "message": "Email is valid"
 }`}
-                  </code>
+                    language="json"
+                    title="Single Response"
+                  />
                   <p className="text-sm text-[#5C5855] mb-3 mt-4">Bulk verification response:</p>
-                  <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`{
+                  <CodeBlock 
+                    code={`{
   "total": 2,
   "valid": 1,
   "invalid": 1,
@@ -480,7 +778,9 @@ Authorization: Bearer YOUR_API_KEY
     { "email": "user2@example.com", "valid": false, ... }
   ]
 }`}
-                  </code>
+                    language="json"
+                    title="Bulk Response"
+                  />
                 </AccordionContent>
               </AccordionItem>
 
@@ -489,21 +789,25 @@ Authorization: Bearer YOUR_API_KEY
                 <AccordionContent className="space-y-4">
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Single Email</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`curl -X POST https://www.fkbounce.com/api/verify-with-key \\
+                    <CodeBlock 
+                      code={`curl -X POST https://www.fkbounce.com/api/verify-with-key \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"email":"user@example.com"}'`}
-                    </code>
+                      language="bash"
+                      title="cURL - Single Email"
+                    />
                   </div>
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Bulk Emails</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`curl -X POST https://www.fkbounce.com/api/verify-bulk-with-key \\
+                    <CodeBlock 
+                      code={`curl -X POST https://www.fkbounce.com/api/verify-bulk-with-key \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"emails":["user1@example.com","user2@example.com"]}'`}
-                    </code>
+                      language="bash"
+                      title="cURL - Bulk Emails"
+                    />
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -513,8 +817,8 @@ Authorization: Bearer YOUR_API_KEY
                 <AccordionContent className="space-y-4">
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Single Email</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`const response = await fetch('https://www.fkbounce.com/api/verify-with-key', {
+                    <CodeBlock 
+                      code={`const response = await fetch('https://www.fkbounce.com/api/verify-with-key', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -524,12 +828,14 @@ Authorization: Bearer YOUR_API_KEY
 })
 const result = await response.json()
 console.log(result)`}
-                    </code>
+                      language="javascript"
+                      title="JavaScript - Single Email"
+                    />
                   </div>
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Bulk Emails</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`const response = await fetch('https://www.fkbounce.com/api/verify-bulk-with-key', {
+                    <CodeBlock 
+                      code={`const response = await fetch('https://www.fkbounce.com/api/verify-bulk-with-key', {
   method: 'POST',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -541,7 +847,9 @@ console.log(result)`}
 })
 const result = await response.json()
 console.log(result.total, result.valid, result.invalid)`}
-                    </code>
+                      language="javascript"
+                      title="JavaScript - Bulk Emails"
+                    />
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -551,8 +859,8 @@ console.log(result.total, result.valid, result.invalid)`}
                 <AccordionContent className="space-y-4">
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Single Email</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`import requests
+                    <CodeBlock 
+                      code={`import requests
 
 response = requests.post(
   'https://www.fkbounce.com/api/verify-with-key',
@@ -561,12 +869,14 @@ response = requests.post(
 )
 result = response.json()
 print(result)`}
-                    </code>
+                      language="python"
+                      title="Python - Single Email"
+                    />
                   </div>
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Bulk Emails</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`import requests
+                    <CodeBlock 
+                      code={`import requests
 
 response = requests.post(
   'https://www.fkbounce.com/api/verify-bulk-with-key',
@@ -575,7 +885,9 @@ response = requests.post(
 )
 result = response.json()
 print(f"Total: {result['total']}, Valid: {result['valid']}")`}
-                    </code>
+                      language="python"
+                      title="Python - Bulk Emails"
+                    />
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -585,8 +897,8 @@ print(f"Total: {result['total']}, Valid: {result['valid']}")`}
                 <AccordionContent className="space-y-4">
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Single Email</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`$ch = curl_init('https://www.fkbounce.com/api/verify-with-key');
+                    <CodeBlock 
+                      code={`$ch = curl_init('https://www.fkbounce.com/api/verify-with-key');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -599,12 +911,14 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
 $response = curl_exec($ch);
 $result = json_decode($response, true);
 curl_close($ch);`}
-                    </code>
+                      language="php"
+                      title="PHP - Single Email"
+                    />
                   </div>
                   <div>
                     <h4 className="font-semibold mb-2 text-sm">Bulk Emails</h4>
-                    <code className="block bg-[#f5f5f5] p-3 rounded font-mono text-xs whitespace-pre">
-{`$ch = curl_init('https://www.fkbounce.com/api/verify-bulk-with-key');
+                    <CodeBlock 
+                      code={`$ch = curl_init('https://www.fkbounce.com/api/verify-bulk-with-key');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -617,7 +931,9 @@ curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
 $response = curl_exec($ch);
 $result = json_decode($response, true);
 curl_close($ch);`}
-                    </code>
+                      language="php"
+                      title="PHP - Bulk Emails"
+                    />
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -645,9 +961,229 @@ curl_close($ch);`}
                   </div>
                 </AccordionContent>
               </AccordionItem>
+
+              <AccordionItem value="webhooks">
+                <AccordionTrigger>Webhooks</AccordionTrigger>
+                <AccordionContent className="space-y-4">
+                  <p className="text-sm text-[#5C5855]">
+                    Receive real-time notifications when bulk verification jobs complete.
+                  </p>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Setup</h4>
+                    <p className="text-xs text-[#5C5855] mb-2">
+                      1. Create a webhook in the Webhooks tab<br/>
+                      2. Save the secret key securely<br/>
+                      3. Configure your server to receive POST requests
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Webhook Payload</h4>
+                    <CodeBlock 
+                      code={`{
+  "event": "bulk_verification_complete",
+  "job_id": "550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2025-11-23T10:30:00.000Z",
+  "data": {
+    "total": 1000,
+    "unique": 950,
+    "valid": 750,
+    "invalid": 200,
+    "duplicates": 50
+  }
+}`}
+                      language="json"
+                      title="Webhook Payload"
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Webhook Headers</h4>
+                    <CodeBlock 
+                      code={`X-Webhook-Signature: sha256=abc123...
+X-Webhook-Event: bulk_verification_complete
+Content-Type: application/json
+User-Agent: FKbounce-Webhook/1.0`}
+                      language="http"
+                      title="Request Headers"
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Verify Webhook Signature (Node.js)</h4>
+                    <CodeBlock 
+                      code={`const crypto = require('crypto')
+
+function verifyWebhook(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(payload))
+    .digest('hex')
+  
+  return signature === expectedSignature
+}
+
+// Express.js example
+app.post('/webhook', (req, res) => {
+  const signature = req.headers['x-webhook-signature']
+  const isValid = verifyWebhook(req.body, signature, YOUR_SECRET)
+  
+  if (!isValid) {
+    return res.status(401).send('Invalid signature')
+  }
+  
+  // Process webhook
+  const { event, job_id, data } = req.body
+  console.log(\`Job \${job_id} completed: \${data.valid} valid emails\`)
+  
+  res.status(200).send('OK')
+})`}
+                      language="javascript"
+                      title="Node.js - Webhook Verification"
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Verify Webhook Signature (Python)</h4>
+                    <CodeBlock 
+                      code={`import hmac
+import hashlib
+import json
+
+def verify_webhook(payload, signature, secret):
+    expected_signature = hmac.new(
+        secret.encode(),
+        json.dumps(payload).encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return signature == expected_signature
+
+# Flask example
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    signature = request.headers.get('X-Webhook-Signature')
+    payload = request.json
+    
+    if not verify_webhook(payload, signature, YOUR_SECRET):
+        return 'Invalid signature', 401
+    
+    # Process webhook
+    event = payload['event']
+    job_id = payload['job_id']
+    data = payload['data']
+    print(f"Job {job_id} completed: {data['valid']} valid emails")
+    
+    return 'OK', 200`}
+                      language="python"
+                      title="Python - Webhook Verification"
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Retry Policy</h4>
+                    <p className="text-xs text-[#5C5855]">
+                      • Webhooks are retried up to 3 times with exponential backoff<br/>
+                      • Delays: 1s, 2s, 4s between retries<br/>
+                      • 10-second timeout per request<br/>
+                      • Your endpoint should return 2xx status code
+                    </p>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="job-status">
+                <AccordionTrigger>Job Status Tracking</AccordionTrigger>
+                <AccordionContent className="space-y-4">
+                  <p className="text-sm text-[#5C5855]">
+                    Track the progress of bulk verification jobs in real-time.
+                  </p>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Get Job Status</h4>
+                    <CodeBlock 
+                      code={`GET /api/verify-bulk-job/{jobId}
+Authorization: Bearer YOUR_API_KEY`}
+                      language="http"
+                      title="Job Status Endpoint"
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Response</h4>
+                    <CodeBlock 
+                      code={`{
+  "job": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "status": "processing",
+    "total_emails": 1000,
+    "processed_emails": 450,
+    "valid_count": 350,
+    "invalid_count": 100,
+    "progress_percentage": 45,
+    "created_at": "2025-11-23T10:00:00.000Z",
+    "updated_at": "2025-11-23T10:05:00.000Z",
+    "completed_at": null,
+    "estimated_time_remaining": 180
+  },
+  "results": null
+}`}
+                      language="json"
+                      title="Job Status Response"
+                    />
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Job Statuses</h4>
+                    <p className="text-xs text-[#5C5855]">
+                      • <strong>pending</strong> - Job queued, not started<br/>
+                      • <strong>processing</strong> - Currently verifying emails<br/>
+                      • <strong>completed</strong> - All emails verified<br/>
+                      • <strong>failed</strong> - Job encountered an error
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-2 text-sm">Poll for Completion (JavaScript)</h4>
+                    <CodeBlock 
+                      code={`async function pollJobStatus(jobId) {
+  const maxAttempts = 60
+  const pollInterval = 5000 // 5 seconds
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(
+      \`/api/verify-bulk-job/\${jobId}\`,
+      { headers: { 'Authorization': 'Bearer YOUR_API_KEY' } }
+    )
+    const data = await response.json()
+    
+    console.log(\`Progress: \${data.job.progress_percentage}%\`)
+    
+    if (data.job.status === 'completed') {
+      console.log('Job completed!', data.results)
+      return data.results
+    }
+    
+    if (data.job.status === 'failed') {
+      throw new Error(data.job.error_message)
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, pollInterval))
+  }
+  
+  throw new Error('Job timeout')
+}`}
+                      language="javascript"
+                      title="JavaScript - Poll Job Status"
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </CardContent>
         </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </main>
   )

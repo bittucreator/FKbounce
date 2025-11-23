@@ -6,6 +6,7 @@ import emailValidator from 'email-validator'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 import { dnsCache } from '@/lib/dns-cache'
+import { getDomainCache, setDomainCache } from '@/lib/domain-cache'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -22,7 +23,7 @@ interface VerificationResult {
   message: string
 }
 
-async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<boolean> {
+async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0): Promise<boolean> {
   if (!mxRecords || mxRecords.length === 0) {
     return false
   }
@@ -31,7 +32,7 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<bool
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let accepted = false
 
-    socket.setTimeout(5000)
+    socket.setTimeout(10000) // Increased to 10 seconds
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)
@@ -47,13 +48,27 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<bool
       socket.end()
     })
 
-    socket.on('timeout', () => {
+    socket.on('timeout', async () => {
       socket.destroy()
-      resolve(false)
+      // Exponential backoff retry (max 3 attempts)
+      if (attempt < 2) {
+        const delay = Math.pow(2, attempt) * 1000 // 1s, 2s
+        await new Promise(r => setTimeout(r, delay))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+      } else {
+        resolve(false)
+      }
     })
 
-    socket.on('error', () => {
-      resolve(false)
+    socket.on('error', async () => {
+      // Retry on error
+      if (attempt < 2) {
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(r => setTimeout(r, delay))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+      } else {
+        resolve(false)
+      }
     })
 
     socket.on('close', () => {
@@ -78,7 +93,7 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let responses: string[] = []
 
-    socket.setTimeout(5000)
+    socket.setTimeout(10000) // Increased to 10 seconds
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)
@@ -118,7 +133,7 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
   })
 }
 
-async function verifyEmail(email: string): Promise<VerificationResult> {
+async function verifyEmail(email: string, enableCatchAll: boolean = true, enableCache: boolean = true): Promise<VerificationResult> {
   const result: VerificationResult = {
     email,
     valid: false,
@@ -145,6 +160,24 @@ async function verifyEmail(email: string): Promise<VerificationResult> {
   }
 
   try {
+    // Check domain cache first
+    if (enableCache) {
+      const cached = getDomainCache(domain)
+      if (cached) {
+        result.dns = cached.dns
+        result.smtp = cached.smtp
+        result.catch_all = cached.catch_all
+        result.valid = result.syntax && result.dns
+        
+        if (result.catch_all && enableCatchAll) {
+          result.message = 'Email domain accepts all addresses (catch-all)'
+        } else {
+          result.message = result.valid ? 'Email is valid' : 'Email verification failed'
+        }
+        return result
+      }
+    }
+
     const mxRecords = await dnsCache.getMxRecords(domain)
     result.dns = !!(mxRecords && mxRecords.length > 0)
     
@@ -154,11 +187,20 @@ async function verifyEmail(email: string): Promise<VerificationResult> {
     }
 
     result.smtp = await checkSMTP(email, mxRecords)
-    result.catch_all = await checkCatchAll(domain, mxRecords)
+    
+    // Only check catch-all if enabled
+    if (enableCatchAll) {
+      result.catch_all = await checkCatchAll(domain, mxRecords)
+    }
+    
+    // Cache the domain results
+    if (enableCache) {
+      setDomainCache(domain, result.dns, result.smtp, result.catch_all, mxRecords)
+    }
     
     result.valid = result.syntax && result.dns
     
-    if (result.catch_all) {
+    if (result.catch_all && enableCatchAll) {
       result.message = 'Email domain accepts all addresses (catch-all)'
     } else {
       result.message = result.valid ? 'Email is valid' : 'Email verification failed'
@@ -253,7 +295,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = await verifyEmail(email)
+    // Get user settings for verification options
+    let { data: settings } = await supabase
+      .from('user_settings')
+      .select('enable_catch_all_check, enable_domain_cache')
+      .eq('user_id', user.id)
+      .single()
+
+    // Use defaults if no settings found
+    const enableCatchAll = settings?.enable_catch_all_check ?? true
+    const enableCache = settings?.enable_domain_cache ?? true
+
+    const result = await verifyEmail(email, enableCatchAll, enableCache)
     
     // Save to history and increment usage count
     try {

@@ -28,7 +28,7 @@ interface VerificationResult {
   message: string
 }
 
-async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<boolean> {
+async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0): Promise<boolean> {
   if (!mxRecords || mxRecords.length === 0) {
     return false
   }
@@ -37,7 +37,7 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<bool
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let accepted = false
 
-    socket.setTimeout(5000)
+    socket.setTimeout(10000) // Increased to 10 seconds
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)
@@ -53,13 +53,25 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<bool
       socket.end()
     })
 
-    socket.on('timeout', () => {
+    socket.on('timeout', async () => {
       socket.destroy()
-      resolve(false)
+      if (attempt < 2) {
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(r => setTimeout(r, delay))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+      } else {
+        resolve(false)
+      }
     })
 
-    socket.on('error', () => {
-      resolve(false)
+    socket.on('error', async () => {
+      if (attempt < 2) {
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(r => setTimeout(r, delay))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+      } else {
+        resolve(false)
+      }
     })
 
     socket.on('close', () => {
@@ -83,7 +95,7 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let responses: string[] = []
 
-    socket.setTimeout(5000)
+    socket.setTimeout(10000) // Increased to 10 seconds
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)

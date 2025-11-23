@@ -6,6 +6,7 @@ import emailValidator from 'email-validator'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 import { dnsCache } from '@/lib/dns-cache'
+import { deliverWebhook, WebhookPayload } from '@/lib/webhook-delivery'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -32,7 +33,7 @@ interface BulkVerificationResponse {
   results: VerificationResult[]
 }
 
-async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<boolean> {
+async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0): Promise<boolean> {
   if (!mxRecords || mxRecords.length === 0) {
     return false
   }
@@ -41,7 +42,7 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<bool
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let accepted = false
 
-    socket.setTimeout(5000)
+    socket.setTimeout(10000) // Increased to 10 seconds
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)
@@ -57,13 +58,25 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[]): Promise<bool
       socket.end()
     })
 
-    socket.on('timeout', () => {
+    socket.on('timeout', async () => {
       socket.destroy()
-      resolve(false)
+      if (attempt < 2) {
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(r => setTimeout(r, delay))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+      } else {
+        resolve(false)
+      }
     })
 
-    socket.on('error', () => {
-      resolve(false)
+    socket.on('error', async () => {
+      if (attempt < 2) {
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(r => setTimeout(r, delay))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+      } else {
+        resolve(false)
+      }
     })
 
     socket.on('close', () => {
@@ -87,7 +100,7 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let responses: string[] = []
 
-    socket.setTimeout(5000)
+    socket.setTimeout(10000) // Increased to 10 seconds
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)
@@ -181,7 +194,7 @@ async function verifyEmail(email: string): Promise<VerificationResult> {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { emails } = body
+    const { emails, stream } = body
 
     if (!emails || !Array.isArray(emails)) {
       return NextResponse.json(
@@ -293,6 +306,167 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // If streaming is enabled, use SSE for real-time progress
+    if (stream) {
+      const encoder = new TextEncoder()
+      const stream = new ReadableStream({
+        async start(controller) {
+          const results: VerificationResult[] = []
+          const startTime = Date.now()
+          let processedCount = 0
+
+          // Create verification job
+          const { data: job } = await supabase
+            .from('verification_jobs')
+            .insert({
+              user_id: user.id,
+              status: 'processing',
+              total_emails: uniqueEmails.length,
+              processed_emails: 0,
+              valid_count: 0,
+              invalid_count: 0,
+              progress_percentage: 0,
+            })
+            .select()
+            .single()
+
+          const jobId = job?.id
+
+          for (const email of uniqueEmails) {
+            const result = await verifyEmail(email)
+            results.push(result)
+            processedCount++
+
+            const elapsedSeconds = (Date.now() - startTime) / 1000
+            const speed = processedCount / elapsedSeconds
+            const validCount = results.filter(r => r.valid).length
+            const invalidCount = results.filter(r => !r.valid).length
+            const progressPercentage = Math.round((processedCount / uniqueEmails.length) * 100)
+
+            // Update job progress
+            if (jobId) {
+              await supabase
+                .from('verification_jobs')
+                .update({
+                  processed_emails: processedCount,
+                  valid_count: validCount,
+                  invalid_count: invalidCount,
+                  progress_percentage: progressPercentage,
+                })
+                .eq('id', jobId)
+            }
+
+            const progress = {
+              processed: processedCount,
+              total: uniqueEmails.length,
+              percentage: progressPercentage,
+              speed: Math.round(speed * 10) / 10,
+              currentEmail: email,
+              valid: validCount,
+              invalid: invalidCount,
+              jobId,
+            }
+
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(progress)}\n\n`))
+          }
+
+          const response: BulkVerificationResponse = {
+            total: emails.length,
+            unique: uniqueEmails.length,
+            duplicates: duplicates.length,
+            duplicateEmails: duplicates,
+            valid: results.filter(r => r.valid).length,
+            invalid: results.filter(r => !r.valid).length,
+            results
+          }
+
+          // Save to history
+          try {
+            await supabase.from('verification_history').insert({
+              user_id: user.id,
+              verification_type: 'bulk',
+              email_count: uniqueEmails.length,
+              valid_count: response.valid,
+              invalid_count: response.invalid,
+              results: results
+            })
+
+            await supabase
+              .from('user_plans')
+              .update({ 
+                verifications_used: (userPlan?.verifications_used || 0) + uniqueEmails.length,
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', user.id)
+
+            // Update job to completed
+            if (jobId) {
+              await supabase
+                .from('verification_jobs')
+                .update({
+                  status: 'completed',
+                  results: results,
+                  completed_at: new Date().toISOString(),
+                })
+                .eq('id', jobId)
+
+              // Trigger webhooks
+              const { data: webhooks } = await supabase
+                .from('webhook_configs')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('is_active', true)
+
+              if (webhooks && webhooks.length > 0) {
+                const payload: WebhookPayload = {
+                  event: 'bulk_verification_complete',
+                  job_id: jobId,
+                  timestamp: new Date().toISOString(),
+                  data: {
+                    total: response.total,
+                    unique: response.unique,
+                    valid: response.valid,
+                    invalid: response.invalid,
+                    duplicates: response.duplicates,
+                  }
+                }
+
+                // Deliver webhooks asynchronously
+                for (const webhook of webhooks) {
+                  deliverWebhook(webhook, payload).then(async (result) => {
+                    await supabase.from('webhook_deliveries').insert({
+                      webhook_config_id: webhook.id,
+                      verification_job_id: jobId,
+                      event_type: payload.event,
+                      payload: payload,
+                      status: result.success ? 'success' : 'failed',
+                      response_code: result.statusCode,
+                      response_body: result.responseBody,
+                      delivered_at: result.success ? new Date().toISOString() : null,
+                    })
+                  }).catch(console.error)
+                }
+              }
+            }
+          } catch (historyError) {
+            console.error('Error saving history:', historyError)
+          }
+
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, results: response, jobId })}\n\n`))
+          controller.close()
+        }
+      })
+
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      })
+    }
+
+    // Original non-streaming behavior
     const results = await Promise.all(
       uniqueEmails.map(email => verifyEmail(email))
     )

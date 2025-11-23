@@ -102,10 +102,7 @@ export default function HistoryPage() {
         <div className="px-4 py-4">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <img src="/Logo-light.svg" alt="FKbounce" className="h-7 w-auto" />
-              <h1 className="text-2xl font-[family-name:var(--font-geist)] text-[#020202]">
-                FKbounce
-              </h1>
+              <img src="/Logo-dark.svg" alt="FKbounce" className="h-7 w-auto" />
             </button>
             <div className="ml-4">
               <AppBreadcrumb />

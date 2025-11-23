@@ -6,7 +6,8 @@ import { Textarea } from '../components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
-import { CheckCircle2, XCircle, Loader2, Download, Shield, AlertTriangle, Mail, Database, Server, Upload, Copy, Check, FolderPlus } from 'lucide-react'
+import { Progress } from '../components/ui/progress'
+import { CheckCircle2, XCircle, Loader2, Download, Shield, AlertTriangle, Mail, Database, Server, Upload, Copy, Check, FolderPlus, FileSpreadsheet, FileText } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu'
+import * as XLSX from 'xlsx'
 
 interface VerificationResult {
   email: string
@@ -47,6 +55,11 @@ export default function BulkVerifier() {
   const [lists, setLists] = useState<any[]>([])
   const [isListDialogOpen, setIsListDialogOpen] = useState(false)
   const [savingToList, setSavingToList] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [verificationSpeed, setVerificationSpeed] = useState(0)
+  const [currentEmail, setCurrentEmail] = useState('')
+  const [processedCount, setProcessedCount] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -212,6 +225,11 @@ export default function BulkVerifier() {
     setLoading(true)
     setError('')
     setResults(null)
+    setProgress(0)
+    setVerificationSpeed(0)
+    setCurrentEmail('')
+    setProcessedCount(0)
+    setTotalCount(emailList.length)
 
     try {
       const response = await fetch('/api/verify-bulk', {
@@ -219,15 +237,45 @@ export default function BulkVerifier() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ emails: emailList }),
+        body: JSON.stringify({ emails: emailList, stream: true }),
       })
 
       if (!response.ok) {
         throw new Error('Failed to verify emails')
       }
 
-      const data = await response.json()
-      setResults(data)
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('Stream not available')
+      }
+
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6))
+            
+            if (data.done) {
+              setResults(data.results)
+              setProgress(100)
+            } else {
+              setProgress(data.percentage)
+              setVerificationSpeed(data.speed)
+              setCurrentEmail(data.currentEmail)
+              setProcessedCount(data.processed)
+            }
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to verify emails')
     } finally {
@@ -235,23 +283,45 @@ export default function BulkVerifier() {
     }
   }
 
-  const downloadResults = () => {
+  const downloadResults = (format: 'csv' | 'xlsx' | 'xls') => {
     if (!results) return
 
-    const csv = [
-      ['Email', 'Valid', 'Syntax', 'DNS', 'SMTP', 'Disposable', 'Message'].join(','),
-      ...results.results.map((r: VerificationResult) => 
-        [r.email, r.valid, r.syntax, r.dns, r.smtp, r.disposable, `"${r.message}"`].join(',')
-      )
-    ].join('\n')
+    if (format === 'csv') {
+      const csv = [
+        ['Email', 'Valid', 'Syntax', 'DNS', 'SMTP', 'Disposable', 'Catch-All', 'Message'].join(','),
+        ...results.results.map((r: VerificationResult) => 
+          [r.email, r.valid, r.syntax, r.dns, r.smtp, r.disposable, r.catch_all, `"${r.message}"`].join(',')
+        )
+      ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `email-verification-${Date.now()}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `email-verification-${Date.now()}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } else {
+      // Excel export
+      const worksheet = XLSX.utils.json_to_sheet(
+        results.results.map((r: VerificationResult) => ({
+          Email: r.email,
+          Valid: r.valid ? 'Yes' : 'No',
+          Syntax: r.syntax ? 'Yes' : 'No',
+          DNS: r.dns ? 'Yes' : 'No',
+          SMTP: r.smtp ? 'Yes' : 'No',
+          Disposable: r.disposable ? 'Yes' : 'No',
+          'Catch-All': r.catch_all ? 'Yes' : 'No',
+          Message: r.message
+        }))
+      )
+
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Email Verification')
+
+      const fileName = `email-verification-${Date.now()}.${format}`
+      XLSX.writeFile(workbook, fileName, { bookType: format === 'xlsx' ? 'xlsx' : 'xls' })
+    }
   }
 
   return (
@@ -327,7 +397,7 @@ export default function BulkVerifier() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying {emails.split(/[\n,\s]+/).filter((e: string) => e.trim().length > 0).length} emails...
+                  Verifying {processedCount}/{totalCount} emails...
                 </>
               ) : (
                 <>
@@ -336,6 +406,26 @@ export default function BulkVerifier() {
                 </>
               )}
             </Button>
+
+            {loading && (
+              <Card className="mt-4">
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Progress: {progress}%</span>
+                      <span className="text-muted-foreground">{verificationSpeed} emails/sec</span>
+                    </div>
+                    <Progress value={progress} className="h-2" />
+                    <div className="text-xs text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Processing: {processedCount} / {totalCount}</span>
+                        {currentEmail && <span className="truncate max-w-xs ml-2">{currentEmail}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </form>
 
           {error && (
@@ -420,14 +510,31 @@ export default function BulkVerifier() {
 
               <div className="flex flex-col gap-2">
                 <div className="flex gap-2">
-                  <Button
-                    onClick={downloadResults}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download CSV
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export Results
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => downloadResults('csv')}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Download as CSV
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => downloadResults('xlsx')}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        Download as Excel (.xlsx)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => downloadResults('xls')}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        Download as Excel 2003 (.xls)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     onClick={copyToClipboard}
                     variant="outline"
