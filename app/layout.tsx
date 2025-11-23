@@ -20,7 +20,7 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'FKbounce - Turn Bounces Into Conversions | Email Verification Tool',
+  title: 'FKbounce - Email Verification',
   description: 'Turn bounces into conversions with professional email verification. Real-time SMTP validation, bulk verification, and disposable email detection. Alternative to ZeroBounce, Hunter.io, Kickbox. Start free with 500 verifications/month.',
   keywords: [
     'email verification',

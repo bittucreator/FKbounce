@@ -17,7 +17,7 @@ interface VerificationResult {
 }
 
 interface ParallelVerifierOptions {
-  concurrency?: number // Number of concurrent workers (default: 500)
+  concurrency?: number // Number of concurrent workers (default: 2000)
   enableCatchAll?: boolean
   enableCache?: boolean
   onProgress?: (progress: {
@@ -223,7 +223,7 @@ export async function verifyEmailsParallel(
   options: ParallelVerifierOptions = {}
 ): Promise<VerificationResult[]> {
   const {
-    concurrency = 500,
+    concurrency = 2000,
     enableCatchAll = true,
     enableCache = true,
     onProgress

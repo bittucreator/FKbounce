@@ -334,8 +334,14 @@ export async function POST(request: NextRequest) {
 
           const jobId = job?.id
 
-          // Determine concurrency based on plan (free: 100, pro: 500)
-          const concurrency = userPlan?.plan === 'pro' ? 500 : 100
+          // Determine concurrency based on plan (free: 200, pro: 2000)
+          // Allow override from request body with validation
+          let concurrency = userPlan?.plan === 'pro' ? 2000 : 200
+          if (body.concurrency && typeof body.concurrency === 'number') {
+            const maxAllowed = userPlan?.plan === 'pro' ? 3000 : 500
+            const minAllowed = 50
+            concurrency = Math.max(minAllowed, Math.min(body.concurrency, maxAllowed))
+          }
 
           // Estimate time
           const estimate = estimateVerificationTime(uniqueEmails.length, concurrency)
@@ -487,7 +493,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Original non-streaming behavior with parallel processing
-    const concurrency = userPlan?.plan === 'pro' ? 500 : 100
+    let concurrency = userPlan?.plan === 'pro' ? 2000 : 200
+    if (body.concurrency && typeof body.concurrency === 'number') {
+      const maxAllowed = userPlan?.plan === 'pro' ? 3000 : 500
+      const minAllowed = 50
+      concurrency = Math.max(minAllowed, Math.min(body.concurrency, maxAllowed))
+    }
     const results = await verifyEmailsParallel(uniqueEmails, {
       concurrency,
       enableCache: true,

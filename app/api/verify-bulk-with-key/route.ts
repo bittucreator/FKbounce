@@ -312,7 +312,12 @@ export async function POST(request: NextRequest) {
     })
 
     // Verify unique emails only using parallel processing
-    const concurrency = userPlan?.plan === 'pro' ? 500 : 100
+    let concurrency = userPlan?.plan === 'pro' ? 2000 : 200
+    if (body.concurrency && typeof body.concurrency === 'number') {
+      const maxAllowed = userPlan?.plan === 'pro' ? 3000 : 500
+      const minAllowed = 50
+      concurrency = Math.max(minAllowed, Math.min(body.concurrency, maxAllowed))
+    }
     const results = await verifyEmailsParallel(uniqueEmails, {
       concurrency,
       enableCache: true,
