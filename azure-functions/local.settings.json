@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "SUPABASE_URL": "",
+    "SUPABASE_SERVICE_KEY": "",
+    "VERCEL_CALLBACK_URL": "https://your-app.vercel.app/api/azure-callback"
+  },
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "*"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "email-verifier-azure-workers",
+  "version": "1.0.0",
+  "description": "Azure Functions workers for bulk email verification",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "prestart": "npm run build",
+    "start": "func start",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0",
+    "email-validator": "^2.0.4",
+    "disposable-email-domains": "^1.0.62"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "azure-functions-core-tools": "^4.0.5455",
+    "typescript": "^5.3.0"
+  }
+}
