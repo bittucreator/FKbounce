@@ -6,6 +6,7 @@ import emailValidator from 'email-validator'
 import { createClient } from '@supabase/supabase-js'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 import { dnsCache } from '@/lib/dns-cache'
+import { verifyEmailsParallel, estimateVerificationTime } from '@/lib/parallel-verifier'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -310,10 +311,13 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Verify unique emails only
-    const results = await Promise.all(
-      uniqueEmails.map(email => verifyEmail(email))
-    )
+    // Verify unique emails only using parallel processing
+    const concurrency = userPlan?.plan === 'pro' ? 500 : 100
+    const results = await verifyEmailsParallel(uniqueEmails, {
+      concurrency,
+      enableCache: true,
+      enableCatchAll: true,
+    })
 
     const validCount = results.filter(r => r.valid).length
     const invalidCount = results.length - validCount

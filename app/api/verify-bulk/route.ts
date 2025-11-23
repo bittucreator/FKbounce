@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 import { dnsCache } from '@/lib/dns-cache'
 import { deliverWebhook, WebhookPayload } from '@/lib/webhook-delivery'
+import { verifyEmailsParallel, estimateVerificationTime } from '@/lib/parallel-verifier'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -311,9 +312,10 @@ export async function POST(request: NextRequest) {
       const encoder = new TextEncoder()
       const stream = new ReadableStream({
         async start(controller) {
-          const results: VerificationResult[] = []
           const startTime = Date.now()
           let processedCount = 0
+          let validCount = 0
+          let invalidCount = 0
 
           // Create verification job
           const { data: job } = await supabase
@@ -332,43 +334,61 @@ export async function POST(request: NextRequest) {
 
           const jobId = job?.id
 
-          for (const email of uniqueEmails) {
-            const result = await verifyEmail(email)
-            results.push(result)
-            processedCount++
+          // Determine concurrency based on plan (free: 100, pro: 500)
+          const concurrency = userPlan?.plan === 'pro' ? 500 : 100
 
-            const elapsedSeconds = (Date.now() - startTime) / 1000
-            const speed = processedCount / elapsedSeconds
-            const validCount = results.filter(r => r.valid).length
-            const invalidCount = results.filter(r => !r.valid).length
-            const progressPercentage = Math.round((processedCount / uniqueEmails.length) * 100)
+          // Estimate time
+          const estimate = estimateVerificationTime(uniqueEmails.length, concurrency)
+          
+          // Send initial estimate
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+            type: 'estimate',
+            totalEmails: uniqueEmails.length,
+            concurrency,
+            estimatedSeconds: estimate.avgSeconds,
+            message: `Processing ${uniqueEmails.length.toLocaleString()} emails with ${concurrency} concurrent workers (estimated ${Math.ceil(estimate.avgSeconds / 60)} minutes)`
+          })}\n\n`))
 
-            // Update job progress
-            if (jobId) {
-              await supabase
-                .from('verification_jobs')
-                .update({
-                  processed_emails: processedCount,
-                  valid_count: validCount,
-                  invalid_count: invalidCount,
-                  progress_percentage: progressPercentage,
-                })
-                .eq('id', jobId)
+          // Verify emails in parallel with progress callback
+          const results = await verifyEmailsParallel(uniqueEmails, {
+            concurrency,
+            onProgress: async (progress) => {
+              processedCount = progress.processed
+              validCount = progress.valid
+              invalidCount = progress.invalid
+
+              const elapsedSeconds = (Date.now() - startTime) / 1000
+              const speed = processedCount / elapsedSeconds
+              const progressPercentage = Math.round((processedCount / uniqueEmails.length) * 100)
+
+              // Update job progress
+              if (jobId) {
+                await supabase
+                  .from('verification_jobs')
+                  .update({
+                    processed_emails: processedCount,
+                    valid_count: validCount,
+                    invalid_count: invalidCount,
+                    progress_percentage: progressPercentage,
+                  })
+                  .eq('id', jobId)
+              }
+
+              const progressData = {
+                type: 'progress',
+                processed: processedCount,
+                total: uniqueEmails.length,
+                percentage: progressPercentage,
+                speed: Math.round(speed * 10) / 10,
+                currentEmail: progress.currentEmail,
+                valid: validCount,
+                invalid: invalidCount,
+                jobId,
+              }
+
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData)}\n\n`))
             }
-
-            const progress = {
-              processed: processedCount,
-              total: uniqueEmails.length,
-              percentage: progressPercentage,
-              speed: Math.round(speed * 10) / 10,
-              currentEmail: email,
-              valid: validCount,
-              invalid: invalidCount,
-              jobId,
-            }
-
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(progress)}\n\n`))
-          }
+          })
 
           const response: BulkVerificationResponse = {
             total: emails.length,
@@ -466,10 +486,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Original non-streaming behavior
-    const results = await Promise.all(
-      uniqueEmails.map(email => verifyEmail(email))
-    )
+    // Original non-streaming behavior with parallel processing
+    const concurrency = userPlan?.plan === 'pro' ? 500 : 100
+    const results = await verifyEmailsParallel(uniqueEmails, {
+      concurrency,
+      enableCache: true,
+      enableCatchAll: true,
+    })
 
     const response: BulkVerificationResponse = {
       total: emails.length,
