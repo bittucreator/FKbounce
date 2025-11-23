@@ -77,8 +77,8 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/favicon-black.png',
-    apple: '/favicon-black.png',
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
   },
   openGraph: {
     title: 'FKbounce - Turn Bounces Into Conversions',

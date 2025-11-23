@@ -48,7 +48,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
+      <main className="min-h-screen flex items-center justify-center bg-[#ffffff]">
         <div className="animate-pulse text-[#5C5855] font-mono">Loading...</div>
       </main>
     )
@@ -161,7 +161,7 @@ export default function Home() {
         <Card className="w-full max-w-md mx-auto h-[350px] z-20 mb-8 xl:mb-0 flex flex-col items-center justify-center">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <img src="/Logo-black.png" alt="FKbounce" className="h-12 w-auto" />
+              <img src="/favicon.svg" alt="FKbounce" className="h-12 w-auto" />
             </div>
             <CardTitle className="text-3xl font-[family-name:var(--font-geist)] text-[#020202]">
               FKbounce
@@ -233,11 +233,11 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <header className="border-b bg-[#eeeeee]">
+      <header className="border-b bg-[#f4f4f4]">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4">
             <button onClick={() => window.location.href = '/'} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <img src="/Logo-black.png" alt="FKbounce" className="h-7 w-auto" />
+              <img src="/Logo-dark.svg" alt="FKbounce" className="h-7 w-auto" />
               <h1 className="text-[1.2rem] font-[family-name:var(--font-geist)] text-[#020202]">
                 FKbounce
               </h1>

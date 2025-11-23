@@ -13,7 +13,7 @@ export default function TermsOfService() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <img src="/Logo-black.png" alt="FKbounce" className="h-8 w-auto" />
+              <img src="/Logo-light.svg" alt="FKbounce" className="h-8 w-auto" />
               <h1 className="text-xl font-[family-name:var(--font-geist)] text-[#020202]">
                 FKBounce
               </h1>

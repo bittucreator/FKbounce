@@ -55,7 +55,7 @@ export const organizationSchema = {
   '@type': 'Organization',
   name: 'FKbounce',
   url: 'https://www.fkbounce.com',
-  logo: 'https://www.fkbounce.com/Logo-black.png',
+  logo: 'https://www.fkbounce.com/Logo-light.svg',
   description:
     'FKbounce provides professional email verification services to help businesses improve email deliverability and reduce bounce rates.',
   sameAs: [
