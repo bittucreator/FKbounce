@@ -17,7 +17,7 @@ import { Mail, Shield, Lock } from 'lucide-react'
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'reset'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
@@ -59,7 +59,14 @@ export default function Home() {
     setAuthError('')
 
     try {
-      if (authMode === 'signup') {
+      if (authMode === 'reset') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        })
+        if (error) throw error
+        setAuthError('Check your email for the password reset link!')
+        setEmail('')
+      } else if (authMode === 'signup') {
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -234,19 +241,36 @@ export default function Home() {
                   disabled={authLoading}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={authLoading}
-                  minLength={6}
-                />
-              </div>
+              {authMode !== 'reset' && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={authLoading}
+                    minLength={6}
+                  />
+                </div>
+              )}
+              
+              {authMode === 'signin' && (
+                <div className="text-right">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('reset')
+                      setAuthError('')
+                    }}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              )}
               
               {authError && (
                 <p className={`text-xs text-center ${authError.includes('Check your email') ? 'text-green-600' : 'text-red-600'}`}>
@@ -259,7 +283,9 @@ export default function Home() {
                 className="w-full"
                 disabled={authLoading}
               >
-                {authLoading ? 'Loading...' : authMode === 'signin' ? 'Sign In' : 'Sign Up'}
+                {authLoading ? 'Loading...' : 
+                 authMode === 'reset' ? 'Send Reset Link' :
+                 authMode === 'signin' ? 'Sign In' : 'Sign Up'}
               </Button>
             </form>
 
@@ -267,12 +293,14 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => {
-                  setAuthMode(authMode === 'signin' ? 'signup' : 'signin')
+                  setAuthMode(authMode === 'reset' ? 'signin' : authMode === 'signin' ? 'signup' : 'signin')
                   setAuthError('')
                 }}
                 className="text-primary hover:underline"
               >
-                {authMode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+                {authMode === 'reset' ? 'Back to sign in' :
+                 authMode === 'signin' ? "Don't have an account? Sign up" : 
+                 'Already have an account? Sign in'}
               </button>
             </div>
           </CardContent>
