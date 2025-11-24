@@ -10,11 +10,18 @@ import AppBreadcrumb from '../components/AppBreadcrumb'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 import { Mail, Shield, Lock } from 'lucide-react'
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+  const [authError, setAuthError] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
@@ -43,6 +50,36 @@ export default function Home() {
     })
     if (error) {
       console.error('Error signing in:', error.message)
+    }
+  }
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAuthLoading(true)
+    setAuthError('')
+
+    try {
+      if (authMode === 'signup') {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+          },
+        })
+        if (error) throw error
+        setAuthError('Check your email to confirm your account!')
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (error) throw error
+      }
+    } catch (error: any) {
+      setAuthError(error.message)
+    } finally {
+      setAuthLoading(false)
     }
   }
 
@@ -158,22 +195,86 @@ export default function Home() {
         </div>
         
         {/* Sign-in card */}
-        <Card className="w-full max-w-md mx-auto h-[350px] z-20 mb-8 xl:mb-0 flex flex-col items-center justify-center">
+        <Card className="w-full max-w-md mx-auto z-20 mb-8 xl:mb-0">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
               <img src="/Mainlogo.png" alt="FKbounce" className="h-16 w-auto" />
             </div>
+            <CardTitle className="text-2xl">Welcome to FKbounce</CardTitle>
+            <CardDescription>Sign in to start verifying email addresses</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button 
               onClick={handleSignIn} 
+              variant="outline"
               className="w-full items-center justify-center flex gap-2"
             >
-              <img src="/google.svg" alt="Google" className="h-4 w-4" /> Sign in with Google
+              <img src="/google.svg" alt="Google" className="h-4 w-4" /> Continue with Google
             </Button>
-            <p className="text-center text-xs text-[#5C5855] font-mono">
-              Sign in to start verifying email addresses.
-            </p>
+            
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground">Or continue with email</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleEmailAuth} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  disabled={authLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  disabled={authLoading}
+                  minLength={6}
+                />
+              </div>
+              
+              {authError && (
+                <p className={`text-xs text-center ${authError.includes('Check your email') ? 'text-green-600' : 'text-red-600'}`}>
+                  {authError}
+                </p>
+              )}
+
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={authLoading}
+              >
+                {authLoading ? 'Loading...' : authMode === 'signin' ? 'Sign In' : 'Sign Up'}
+              </Button>
+            </form>
+
+            <div className="text-center text-sm">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode(authMode === 'signin' ? 'signup' : 'signin')
+                  setAuthError('')
+                }}
+                className="text-primary hover:underline"
+              >
+                {authMode === 'signin' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+              </button>
+            </div>
           </CardContent>
         </Card>
         
