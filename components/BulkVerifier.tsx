@@ -55,6 +55,8 @@ export default function BulkVerifier() {
   const [lists, setLists] = useState<any[]>([])
   const [isListDialogOpen, setIsListDialogOpen] = useState(false)
   const [savingToList, setSavingToList] = useState(false)
+  const [savingToNotion, setSavingToNotion] = useState(false)
+  const [notionConnected, setNotionConnected] = useState(false)
   const [progress, setProgress] = useState(0)
   const [verificationSpeed, setVerificationSpeed] = useState(0)
   const [currentEmail, setCurrentEmail] = useState('')
@@ -64,6 +66,7 @@ export default function BulkVerifier() {
 
   useEffect(() => {
     fetchLists()
+    checkNotionConnection()
   }, [])
 
   const fetchLists = async () => {
@@ -75,6 +78,55 @@ export default function BulkVerifier() {
       }
     } catch (err) {
       console.error('Failed to fetch lists:', err)
+    }
+  }
+
+  const checkNotionConnection = async () => {
+    try {
+      const response = await fetch('/api/integrations/notion')
+      if (response.ok) {
+        const data = await response.json()
+        setNotionConnected(data.connected && data.selected_database_id)
+      }
+    } catch (err) {
+      console.error('Failed to check Notion connection:', err)
+    }
+  }
+
+  const saveToNotion = async () => {
+    if (!results) return
+
+    setSavingToNotion(true)
+    try {
+      const emailsToSave = results.results.map(result => ({
+        email: result.email,
+        valid: result.valid,
+        syntax: result.syntax,
+        dns: result.dns,
+        smtp: result.smtp,
+        disposable: result.disposable,
+        catch_all: result.catch_all,
+        message: result.message,
+      }))
+
+      const response = await fetch('/api/integrations/notion/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emails: emailsToSave }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        alert(`Successfully saved ${data.saved} emails to Notion!`)
+      } else {
+        const data = await response.json()
+        alert(data.error || 'Failed to save to Notion')
+      }
+    } catch (err) {
+      console.error('Failed to save to Notion:', err)
+      alert('Failed to save to Notion')
+    } finally {
+      setSavingToNotion(false)
     }
   }
 
@@ -595,6 +647,40 @@ export default function BulkVerifier() {
                     </div>
                   </DialogContent>
                 </Dialog>
+
+                {notionConnected ? (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={saveToNotion}
+                    disabled={savingToNotion}
+                  >
+                    {savingToNotion ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Saving to Notion...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4 w-4 mr-2" viewBox="0 0 100 100" fill="currentColor">
+                          <path d="M6.017 4.313l55.333 -4.087c6.797 -0.583 8.543 -0.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277 -1.553 6.807 -6.99 7.193L24.467 99.967c-4.08 0.193 -6.023 -0.39 -8.16 -3.113L3.3 79.94c-2.333 -3.113 -3.3 -5.443 -3.3 -8.167V11.113c0 -3.497 1.553 -6.413 6.017 -6.8z"/>
+                        </svg>
+                        Save All to Notion ({results.total} emails)
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => window.location.href = '/integrations'}
+                  >
+                    <svg className="h-4 w-4 mr-2" viewBox="0 0 100 100" fill="currentColor">
+                      <path d="M6.017 4.313l55.333 -4.087c6.797 -0.583 8.543 -0.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277 -1.553 6.807 -6.99 7.193L24.467 99.967c-4.08 0.193 -6.023 -0.39 -8.16 -3.113L3.3 79.94c-2.333 -3.113 -3.3 -5.443 -3.3 -8.167V11.113c0 -3.497 1.553 -6.413 6.017 -6.8z"/>
+                    </svg>
+                    Connect Notion to Save
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
