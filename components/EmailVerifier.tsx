@@ -36,15 +36,10 @@ export default function EmailVerifier() {
   const [lists, setLists] = useState<any[]>([])
   const [isListDialogOpen, setIsListDialogOpen] = useState(false)
   const [savingToList, setSavingToList] = useState(false)
-  const [savingToNotion, setSavingToNotion] = useState(false)
-  const [notionConnected, setNotionConnected] = useState(false)
-  const [notionWorkspace, setNotionWorkspace] = useState<string>('')
-  const [notionDatabase, setNotionDatabase] = useState<string>('')
 
   useEffect(() => {
     fetchUsage()
     fetchLists()
-    checkNotionConnection()
   }, [])
 
   const fetchLists = async () => {
@@ -68,60 +63,6 @@ export default function EmailVerifier() {
       }
     } catch (err) {
       console.error('Failed to fetch usage:', err)
-    }
-  }
-
-  const checkNotionConnection = async () => {
-    try {
-      const response = await fetch('/api/integrations/notion')
-      if (response.ok) {
-        const data = await response.json()
-        setNotionConnected(data.connected && data.selected_database_id)
-        if (data.connected) {
-          setNotionWorkspace(data.workspace_name || '')
-          // Find the selected database name
-          const selectedDb = data.databases?.find((db: any) => db.id === data.selected_database_id)
-          setNotionDatabase(selectedDb?.title || 'Selected Database')
-        }
-      }
-    } catch (err) {
-      console.error('Failed to check Notion connection:', err)
-    }
-  }
-
-  const saveToNotion = async () => {
-    if (!result) return
-
-    setSavingToNotion(true)
-    try {
-      const response = await fetch('/api/integrations/notion/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emails: [{
-            email: result.email,
-            valid: result.valid,
-            syntax: result.syntax,
-            dns: result.dns,
-            smtp: result.smtp,
-            disposable: result.disposable,
-            catch_all: result.catch_all,
-            message: result.message,
-          }]
-        }),
-      })
-
-      if (response.ok) {
-        alert('Email saved to Notion successfully!')
-      } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to save to Notion')
-      }
-    } catch (err) {
-      console.error('Failed to save to Notion:', err)
-      alert('Failed to save to Notion')
-    } finally {
-      setSavingToNotion(false)
     }
   }
 
@@ -444,89 +385,48 @@ export default function EmailVerifier() {
               </CardContent>
             </Card>
 
-            <div className="flex gap-2">
-              <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="flex-1">
-                    <FolderPlus className="h-4 w-4 mr-2" />
-                    Save to List
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Save to List</DialogTitle>
-                    <DialogDescription>
-                      Choose a list to save this verified email
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                    {lists.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-8">
-                        No lists found. Create a list in the Lists tab first.
-                      </p>
-                    ) : (
-                      lists.map((list: any) => (
-                        <Button
-                          key={list.id}
-                          variant="outline"
-                          className="w-full justify-start"
-                          onClick={() => saveToList(list.id)}
-                          disabled={savingToList}
-                        >
-                          <div
-                            className="w-3 h-3 rounded-full mr-2"
-                            style={{ backgroundColor: list.color }}
-                          />
-                          {list.name}
-                          <Badge variant="secondary" className="ml-auto">
-                            {list.email_count || 0}
-                          </Badge>
-                        </Button>
-                      ))
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              {notionConnected ? (
-                <Button 
-                  variant="outline" 
-                  className="flex-1 flex-col h-auto py-2"
-                  onClick={saveToNotion}
-                  disabled={savingToNotion}
-                >
-                  {savingToNotion ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
+            <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full">
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  Save to List
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Save to List</DialogTitle>
+                  <DialogDescription>
+                    Choose a list to save this verified email
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                  {lists.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No lists found. Create a list in the Lists tab first.
+                    </p>
                   ) : (
-                    <>
-                      <div className="flex items-center gap-2 w-full justify-center">
-                        <svg className="h-4 w-4" viewBox="0 0 100 100" fill="currentColor">
-                          <path d="M6.017 4.313l55.333 -4.087c6.797 -0.583 8.543 -0.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277 -1.553 6.807 -6.99 7.193L24.467 99.967c-4.08 0.193 -6.023 -0.39 -8.16 -3.113L3.3 79.94c-2.333 -3.113 -3.3 -5.443 -3.3 -8.167V11.113c0 -3.497 1.553 -6.413 6.017 -6.8z"/>
-                        </svg>
-                        <span className="font-semibold">Save to Notion</span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {notionWorkspace} → {notionDatabase}
-                      </div>
-                    </>
+                    lists.map((list: any) => (
+                      <Button
+                        key={list.id}
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => saveToList(list.id)}
+                        disabled={savingToList}
+                      >
+                        <div
+                          className="w-3 h-3 rounded-full mr-2"
+                          style={{ backgroundColor: list.color }}
+                        />
+                        {list.name}
+                        <Badge variant="secondary" className="ml-auto">
+                          {list.email_count || 0}
+                        </Badge>
+                      </Button>
+                    ))
                   )}
-                </Button>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  className="flex-1"
-                  onClick={() => window.location.href = '/integrations'}
-                >
-                  <svg className="h-4 w-4 mr-2" viewBox="0 0 100 100" fill="currentColor">
-                    <path d="M6.017 4.313l55.333 -4.087c6.797 -0.583 8.543 -0.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277 -1.553 6.807 -6.99 7.193L24.467 99.967c-4.08 0.193 -6.023 -0.39 -8.16 -3.113L3.3 79.94c-2.333 -3.113 -3.3 -5.443 -3.3 -8.167V11.113c0 -3.497 1.553 -6.413 6.017 -6.8z"/>
-                  </svg>
-                  Connect Notion
-                </Button>
-              )}
-            </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
         </>
