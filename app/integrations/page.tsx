@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -30,7 +30,7 @@ interface NotionConnection {
   selected_database_id?: string
 }
 
-export default function IntegrationsPage() {
+function IntegrationsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
@@ -323,5 +323,17 @@ export default function IntegrationsPage() {
         </Card>
       </div>
     </main>
+  )
+}
+
+export default function IntegrationsPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
+        <div className="animate-pulse text-[#5C5855] font-mono">Loading...</div>
+      </main>
+    }>
+      <IntegrationsContent />
+    </Suspense>
   )
 }
