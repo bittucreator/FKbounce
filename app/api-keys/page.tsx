@@ -19,9 +19,11 @@ import WebhookConfigModal from '../../components/WebhookConfigModal'
 interface ApiKey {
   id: string
   name: string
-  key: string
+  key_hash: string
+  key_prefix: string
   created_at: string
   last_used_at: string | null
+  is_active: boolean
 }
 
 interface ApiStatus {
@@ -170,24 +172,52 @@ export default function ApiKeysPage() {
   }
 
   const handleCreateKey = async () => {
-    if (!newKeyName.trim()) return
+    if (!newKeyName.trim()) {
+      alert('Please enter a name for your API key')
+      return
+    }
 
     setCreating(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError) {
+        console.error('Auth error:', authError)
+        alert('Authentication error. Please sign in again.')
+        return
+      }
+      
+      if (!user) {
+        alert('You must be logged in to create an API key')
+        router.push('/')
+        return
+      }
 
       const newKey = generateApiKey()
+      const keyPrefix = newKey.substring(0, 11) // fkb_ + first 7 chars
+      
+      // Hash the key for storage (using a simple approach - in production use proper hashing)
+      const encoder = new TextEncoder()
+      const data = encoder.encode(newKey)
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const keyHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
 
-      const { error } = await supabase
+      const { data: insertData, error } = await supabase
         .from('api_keys')
         .insert({
           user_id: user.id,
           name: newKeyName,
-          key: newKey,
+          key_hash: keyHash,
+          key_prefix: keyPrefix,
+          is_active: true,
         })
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Database error:', error)
+        throw error
+      }
 
       setNewKeyName('')
       await loadApiKeys()
@@ -195,9 +225,9 @@ export default function ApiKeysPage() {
       
       // Test API status with the new key
       checkApiStatus(newKey)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating API key:', error)
-      alert('Failed to create API key')
+      alert(`Failed to create API key: ${error.message || 'Unknown error'}`)
     } finally {
       setCreating(false)
     }
@@ -341,11 +371,14 @@ export default function ApiKeysPage() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => checkApiStatus(apiKeys[0].key)}
-                  disabled={apiStatuses[0].status === 'checking'}
+                  onClick={() => showKey && checkApiStatus(showKey)}
+                  disabled={apiStatuses[0].status === 'checking' || !showKey}
                 >
                   {apiStatuses[0].status === 'checking' ? 'Testing...' : 'Test Again'}
                 </Button>
+                {!showKey && (
+                  <p className="text-xs text-[#5C5855] mt-2">Create a new API key to test endpoints</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -422,26 +455,23 @@ export default function ApiKeysPage() {
 
                     <div className="flex items-center gap-2">
                       <code className="flex-1 bg-[#f5f5f5] px-3 py-2 rounded font-mono text-sm">
-                        {showKey === apiKey.key ? apiKey.key : maskKey(apiKey.key)}
+                        {showKey && showKey.startsWith(apiKey.key_prefix) ? showKey : apiKey.key_prefix + '•'.repeat(40)}
                       </code>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowKey(showKey === apiKey.key ? null : apiKey.key)}
-                      >
-                        {showKey === apiKey.key ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyToClipboard(apiKey.key)}
-                      >
-                        {copiedKey === apiKey.key ? (
-                          <span className="text-green-600">Copied!</span>
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
+                      {showKey && showKey.startsWith(apiKey.key_prefix) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(showKey)}
+                        >
+                          {copiedKey === showKey ? (
+                            <span className="text-green-600">Copied!</span>
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Hidden for security</Badge>
+                      )}
                     </div>
                   </div>
                 ))}
