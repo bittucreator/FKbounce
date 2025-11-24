@@ -98,7 +98,7 @@ export default function HistoryPage() {
 
   return (
     <>
-      <header className="border-b bg-[#eeeeee]">
+      <header className="border-b-[0.5px] bg-[#fafafa]">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">

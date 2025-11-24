@@ -397,7 +397,7 @@ export default function BulkVerifier() {
                 className={`relative ${isDragging ? 'ring-2 ring-primary' : ''}`}
               >
                 {isDragging && (
-                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 rounded-md border-2 border-dashed border-primary">
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary/10 rounded-[12px] border-2 border-dashed border-primary">
                     <div className="text-center">
                       <Upload className="h-12 w-12 mx-auto mb-2 text-primary" />
                       <p className="text-sm font-medium">Drop CSV file here</p>
@@ -640,7 +640,7 @@ export default function BulkVerifier() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-md border">
+              <div className="rounded-[12px] border">
                 <Table>
                   <TableHeader>
                     <TableRow>

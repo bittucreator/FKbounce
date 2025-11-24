@@ -132,7 +132,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       </head>
-      <body className={`${geist.variable} ${geistMono.variable} bg-[#eeeeee] dark:bg-[#0a0a0a] font-sans`}>
+      <body className={`${geist.variable} ${geistMono.variable} bg-[#fafafa] dark:bg-[#0a0a0a] font-sans`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

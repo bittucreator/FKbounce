@@ -10,7 +10,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '../components/ui/breadcrumb'
-import { Home } from 'lucide-react'
 
 export default function AppBreadcrumb() {
   const pathname = usePathname()
@@ -40,17 +39,9 @@ export default function AppBreadcrumb() {
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem>
-          <BreadcrumbLink asChild>
-            <Link href="/">
-              <img src="/home.svg" alt="Home" className="h-6 w-6" />
-            </Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
-        
         {breadcrumbItems.map((item, index) => (
           <span key={item.href} className="contents">
-            <BreadcrumbSeparator />
+            {index > 0 && <BreadcrumbSeparator />}
             <BreadcrumbItem>
               {item.isLast ? (
                 <BreadcrumbPage>{item.label}</BreadcrumbPage>

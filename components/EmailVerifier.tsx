@@ -505,7 +505,7 @@ export default function EmailVerifier() {
                       <span className="text-sm font-medium block mb-2">Insights</span>
                       <div className="space-y-2">
                         {result.insights.map((insight, idx) => (
-                          <div key={idx} className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                          <div key={idx} className="text-sm text-muted-foreground bg-muted/50 rounded-[12px] px-3 py-2">
                             {insight}
                           </div>
                         ))}

@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import { Button } from '../../components/ui/button'
 import { Progress } from '../../components/ui/progress'
 import { Badge } from '../../components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Mail, Calendar, Activity, Zap } from 'lucide-react'
+import { TrendingUp, CheckCircle, XCircle, Mail, Calendar, Activity, Zap } from 'lucide-react'
 import { format, subDays, startOfDay } from 'date-fns'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import AppBreadcrumb from '../../components/AppBreadcrumb'
 
 interface DailyStats {
   date: string
@@ -165,7 +165,7 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
+      <main className="min-h-screen flex items-center justify-center bg-[#fafafa]">
         <div className="animate-pulse text-[#5C5855] font-mono">Loading analytics...</div>
       </main>
     )
@@ -174,20 +174,22 @@ export default function AnalyticsPage() {
   const maxDaily = Math.max(...dailyStats.map(d => d.total), 1)
 
   return (
-    <main className="min-h-screen bg-[#eeeeee] py-12 px-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
+    <main className="min-h-screen flex flex-col">
+      <header className="border-b-[0.5px] bg-[#fafafa]">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img src="/Logo-dark.svg" alt="FKbounce" className="h-7 w-auto" />
+            </button>
+            <div className="ml-1">
+              <AppBreadcrumb />
+            </div>
+          </div>
         </div>
+      </header>
+
+      <div className="flex-1 bg-[#fafafa] py-12 px-4">
+      <div className="max-w-6xl mx-auto space-y-6">
 
         <div>
           <h1 className="text-3xl font-bold text-[#020202] font-[family-name:var(--font-geist)]">
@@ -479,6 +481,7 @@ export default function AnalyticsPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </main>
   )

@@ -56,7 +56,7 @@ export default function Home() {
 
   if (!user) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center bg-[#eeeeee] relative px-4 overflow-hidden">
+      <main className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa] relative px-4 overflow-hidden">
         {/* Desktop floating feature cards - scattered asymmetrically */}
         {/* Top Left */}
         <div className="hidden xl:block absolute left-12 top-20 w-80 z-10">
@@ -230,7 +230,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen flex flex-col">
-      <header className="border-b bg-[#f4f4f4]">
+      <header className="border-b-[0.5px] bg-[#fafafa]">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4">
             <button onClick={() => window.location.href = '/'} className="flex items-center gap-2 hover:opacity-80 transition-opacity">

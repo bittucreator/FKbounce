@@ -7,7 +7,7 @@ import { ArrowLeft } from 'lucide-react'
 
 export default function TermsOfService() {
   return (
-    <div className="min-h-screen bg-[#eeeeee]">
+    <div className="min-h-screen bg-[#fafafa]">
       {/* Header */}
       <header className="border-b bg-white">
         <div className="container mx-auto px-4 py-4">

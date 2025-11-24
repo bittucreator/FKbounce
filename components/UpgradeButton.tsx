@@ -22,7 +22,7 @@ export default function UpgradeButton({ currentPlan = 'free' }: UpgradeButtonPro
       variant="outline"
       size="sm"
       onClick={() => setShowPricing(true)}
-      className="gap-2 align-middle w-30 h-[25px] bg-[#eeeeee] border border-[#cccccc] text-black hover:bg-white/90 font-[family-name:var(--font-geist-mono)] text-[12px] leading-[12px] tracking-[-0.2px] rounded-[4px]"
+      className="gap-2 align-middle w-30 h-[25px] bg-[#fafafa] border border-[#cccccc] text-black hover:bg-white/90 font-[family-name:var(--font-geist-mono)] text-[12px] leading-[12px] tracking-[-0.2px] rounded-[4px]"
     >
       Upgrade now
     </Button>

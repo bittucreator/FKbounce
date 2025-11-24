@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { Separator } from '../../components/ui/separator'
-import { Calendar, CheckCircle2, CreditCard, AlertCircle, ArrowLeft } from 'lucide-react'
+import { Calendar, CheckCircle2, CreditCard, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
+import AppBreadcrumb from '../../components/AppBreadcrumb'
 
 interface Subscription {
   dodo_subscription_id: string
@@ -102,7 +103,7 @@ export default function SubscriptionPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
+      <main className="min-h-screen flex items-center justify-center bg-[#fafafa]">
         <div className="animate-pulse text-[#5C5855] font-mono">Loading...</div>
       </main>
     )
@@ -112,20 +113,22 @@ export default function SubscriptionPage() {
   const usagePercentage = userPlan ? (userPlan.verifications_used / userPlan.verifications_limit) * 100 : 0
 
   return (
-    <main className="min-h-screen bg-[#eeeeee] py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
+    <main className="min-h-screen flex flex-col">
+      <header className="border-b-[0.5px] bg-[#fafafa]">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img src="/Logo-dark.svg" alt="FKbounce" className="h-7 w-auto" />
+            </button>
+            <div className="ml-1">
+              <AppBreadcrumb />
+            </div>
+          </div>
         </div>
+      </header>
+
+      <div className="flex-1 bg-[#fafafa] py-12 px-4">
+      <div className="max-w-4xl mx-auto space-y-6">
 
         <div>
           <h1 className="text-3xl font-bold text-[#020202] font-[family-name:var(--font-geist)]">
@@ -219,7 +222,7 @@ export default function SubscriptionPage() {
 
             {/* Cancellation Notice */}
             {subscription?.cancel_at_period_end && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="bg-orange-50 border border-orange-200 rounded-[12px] p-4">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
                   <div>
@@ -331,6 +334,7 @@ export default function SubscriptionPage() {
             </ul>
           </CardContent>
         </Card>
+      </div>
       </div>
     </main>
   )

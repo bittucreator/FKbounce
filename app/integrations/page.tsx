@@ -103,15 +103,15 @@ function IntegrationsContent() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
+      <main className="min-h-screen flex items-center justify-center bg-[#fafafa]">
         <Loader2 className="h-8 w-8 animate-spin text-[#5C5855]" />
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#eeeeee]">
-      <header className="border-b bg-[#eeeeee]">
+    <main className="min-h-screen bg-[#fafafa]">
+      <header className="border-b-[0.5px] bg-[#fafafa]">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -167,7 +167,7 @@ function IntegrationsContent() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 border rounded-lg opacity-50">
+              <div className="text-center p-4 border rounded-[12px] opacity-50">
                 <img src="/zapier.jpeg" alt="Zapier" className="h-12 w-12 mx-auto mb-2 rounded" />
                 <p className="text-xs font-medium">Zapier</p>
                 <Badge variant="secondary" className="text-xs mt-1">Coming Soon</Badge>
@@ -183,7 +183,7 @@ function IntegrationsContent() {
 export default function IntegrationsPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
+      <main className="min-h-screen flex items-center justify-center bg-[#fafafa]">
         <div className="animate-pulse text-[#5C5855] font-mono">Loading...</div>
       </main>
     }>

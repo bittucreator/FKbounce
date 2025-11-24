@@ -60,7 +60,7 @@ export function CommandMenu() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-input px-1 py- text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+        className="inline-flex items-center gap-2 rounded-[12px] border border-input px-1 py- text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
       >
         <Kbd className="hidden sm:inline-flex ml-auto">
           <span className="text-xs">⌘</span>K

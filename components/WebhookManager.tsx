@@ -136,7 +136,7 @@ export default function WebhookManager() {
         )}
 
         {webhooks.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed rounded-lg">
+          <div className="text-center py-8 border-2 border-dashed rounded-[12px]">
             <Webhook className="h-12 w-12 mx-auto text-gray-400 mb-3" />
             <p className="text-gray-600 mb-2">No webhooks configured</p>
             <p className="text-sm text-gray-500 mb-4">
@@ -148,7 +148,7 @@ export default function WebhookManager() {
             {webhooks.map(webhook => (
               <div
                 key={webhook.id}
-                className="border rounded-lg p-4 space-y-3"
+                className="border rounded-[12px] p-4 space-y-3"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-2">

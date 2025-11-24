@@ -73,22 +73,19 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
+      <main className="min-h-screen flex items-center justify-center bg-[#fafafa]">
         <Loader2 className="h-8 w-8 animate-spin text-[#5C5855]" />
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#eeeeee]">
-      <header className="border-b bg-[#eeeeee]">
+    <main className="min-h-screen flex flex-col">
+      <header className="border-b-[0.5px] bg-[#fafafa]">
         <div className="px-4 py-4">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-              <img src="/Logo-light.svg" alt="FKbounce" className="h-7 w-auto" />
-              <h1 className="text-[1.2rem] font-[family-name:var(--font-geist)] text-[#020202]">
-                FKbounce
-              </h1>
+              <img src="/Logo-dark.svg" alt="FKbounce" className="h-7 w-auto" />
             </button>
             <div className="ml-1">
               <AppBreadcrumb />
@@ -97,7 +94,8 @@ export default function SettingsPage() {
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-10 max-w-3xl">
+      <div className="flex-1 bg-[#fafafa] py-12 px-4">
+        <div className="max-w-3xl mx-auto space-y-6">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <SettingsIcon className="h-8 w-8 text-[#020202]" />
@@ -105,7 +103,7 @@ export default function SettingsPage() {
               Verification Settings
             </h2>
           </div>
-          <p className="text-[#5C5855] font-mono">
+          <p className="text-[#5C5855] font-mono text-sm">
             Customize your email verification preferences
           </p>
         </div>
@@ -204,6 +202,7 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </main>
   )

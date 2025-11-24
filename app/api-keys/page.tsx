@@ -8,7 +8,8 @@ import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import { Badge } from '../../components/ui/badge'
 import { Separator } from '../../components/ui/separator'
-import { ArrowLeft, Key, Copy, Eye, EyeOff, Trash2, Plus, Code, Book, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import { Key, Copy, Eye, EyeOff, Trash2, Plus, Code, Book, CheckCircle2, XCircle, Loader2 } from 'lucide-react'
+import AppBreadcrumb from '../../components/AppBreadcrumb'
 import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/ui/accordion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
@@ -277,27 +278,29 @@ export default function ApiKeysPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#eeeeee]">
+      <main className="min-h-screen flex items-center justify-center bg-[#fafafa]">
         <div className="animate-pulse text-[#5C5855] font-mono">Loading...</div>
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#eeeeee] py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push('/')}
-            className="gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
+    <main className="min-h-screen flex flex-col">
+      <header className="border-b-[0.5px] bg-[#fafafa]">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img src="/Logo-dark.svg" alt="FKbounce" className="h-7 w-auto" />
+            </button>
+            <div className="ml-1">
+              <AppBreadcrumb />
+            </div>
+          </div>
         </div>
+      </header>
+
+      <div className="flex-1 bg-[#fafafa] py-12 px-4">
+      <div className="max-w-4xl mx-auto space-y-6">
 
         <div>
           <h1 className="text-3xl font-bold text-[#020202] font-[family-name:var(--font-geist)]">
@@ -343,7 +346,7 @@ export default function ApiKeysPage() {
             <CardContent>
               <div className="space-y-3">
                 {apiStatuses.map((status, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div key={index} className="flex items-center justify-between p-3 border rounded-[12px]">
                     <div className="flex items-center gap-3">
                       {status.status === 'checking' && (
                         <Loader2 className="h-5 w-5 animate-spin text-[#5C5855]" />
@@ -434,7 +437,7 @@ export default function ApiKeysPage() {
             ) : (
               <div className="space-y-4">
                 {apiKeys.map((apiKey) => (
-                  <div key={apiKey.id} className="border rounded-lg p-4 space-y-3">
+                  <div key={apiKey.id} className="border rounded-[12px] p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
                         <h3 className="font-semibold text-[#020202]">{apiKey.name}</h3>
@@ -1057,6 +1060,7 @@ Authorization: Bearer YOUR_API_KEY`}
         </Card>
           </TabsContent>
         </Tabs>
+      </div>
       </div>
     </main>
   )

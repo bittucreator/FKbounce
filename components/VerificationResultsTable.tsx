@@ -42,7 +42,7 @@ export default function VerificationResultsTable({ results }: VerificationResult
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-[12px] border">
       <Table>
         <TableHeader>
           <TableRow>

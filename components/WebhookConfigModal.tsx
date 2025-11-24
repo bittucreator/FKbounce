@@ -148,7 +148,7 @@ export default function WebhookConfigModal({ onWebhookCreated }: WebhookConfigMo
               <p className="text-xs text-gray-600">
                 Select which events should trigger this webhook
               </p>
-              <div className="space-y-3 border rounded-lg p-4">
+              <div className="space-y-3 border rounded-[12px] p-4">
                 {WEBHOOK_EVENTS.map(event => (
                   <div key={event.id} className="flex items-start space-x-3">
                     <Checkbox

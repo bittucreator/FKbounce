@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, FolderOpen, Mail, Trash2, Edit2, Download, Home, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Plus, FolderOpen, Mail, Trash2, Edit2, Download } from 'lucide-react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog'
@@ -9,6 +10,7 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Textarea } from './ui/textarea'
 import { Badge } from './ui/badge'
+import AppBreadcrumb from './AppBreadcrumb'
 
 interface List {
   id: string
@@ -28,6 +30,7 @@ interface ListEmail {
 }
 
 export default function SmartLists() {
+  const router = useRouter()
   const [lists, setLists] = useState<List[]>([])
   const [selectedList, setSelectedList] = useState<List | null>(null)
   const [emails, setEmails] = useState<ListEmail[]>([])
@@ -179,23 +182,31 @@ export default function SmartLists() {
   ]
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm mb-6">
-        <a href="/" className="flex items-center text-muted-foreground hover:text-foreground transition-colors">
-          <Home className="h-4 w-4" />
-        </a>
-        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-        <span className="font-medium text-foreground">Smart Lists</span>
-      </nav>
-
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-[#020202] font-[family-name:var(--font-geist)]">
-            Smart Lists
-          </h1>
-          <p className="text-[#5C5855] mt-1">Organize and manage your verified email lists efficiently</p>
+    <main className="min-h-screen flex flex-col">
+      <header className="border-b-[0.5px] bg-[#fafafa]">
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-4">
+            <button onClick={() => router.push('/')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img src="/Logo-dark.svg" alt="FKbounce" className="h-7 w-auto" />
+            </button>
+            <div className="ml-1">
+              <AppBreadcrumb />
+            </div>
+          </div>
         </div>
+      </header>
+
+      <div className="flex-1 bg-[#fafafa] py-12 px-4">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-[#020202] font-[family-name:var(--font-geist)]">
+                Smart Lists
+              </h1>
+              <p className="text-[#5C5855] mt-2 font-mono text-sm">
+                Organize and manage your verified email lists efficiently
+              </p>
+            </div>
         
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -271,9 +282,9 @@ export default function SmartLists() {
                   <div
                     key={list.id}
                     onClick={() => selectList(list)}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    className={`p-3 rounded-[12px] border cursor-pointer transition-colors ${
                       selectedList?.id === list.id
-                        ? 'border-black bg-[#eeeeee]'
+                        ? 'border-black bg-[#fafafa]'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -368,7 +379,7 @@ export default function SmartLists() {
                   {emails.map(email => (
                     <div
                       key={email.id}
-                      className="p-3 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                      className="p-3 rounded-[12px] border border-gray-200 hover:border-gray-300 transition-colors"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -447,6 +458,8 @@ export default function SmartLists() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+        </div>
+      </div>
+    </main>
   )
 }

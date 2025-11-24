@@ -23,7 +23,7 @@ export default function PaymentCancelPage() {
         </p>
         <a
           href="/"
-          className="inline-block mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          className="inline-block mt-4 px-6 py-2 bg-primary text-primary-foreground rounded-[12px] hover:bg-primary/90 transition-colors"
         >
           Return to Dashboard
         </a>
