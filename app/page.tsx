@@ -20,6 +20,7 @@ export default function Home() {
   const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'reset'>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [fullName, setFullName] = useState('')
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState('')
   const supabase = createClient()
@@ -72,6 +73,9 @@ export default function Home() {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/api/auth/callback`,
+            data: {
+              full_name: fullName,
+            },
           },
         })
         if (error) throw error
@@ -229,6 +233,20 @@ export default function Home() {
             </div>
 
             <form onSubmit={handleEmailAuth} className="space-y-4">
+              {authMode === 'signup' && (
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    placeholder="John Doe"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                    disabled={authLoading}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
