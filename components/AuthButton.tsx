@@ -128,7 +128,8 @@ export default function AuthButton() {
 
   if (!user) {
     return (
-      <Button onClick={handleSignIn} variant="outline" size="sm">
+      <Button onClick={handleSignIn} variant="outline" size="sm" className="flex items-center gap-2">
+        <img src="/google.svg" alt="Google" className="h-4 w-4" />
         Sign in with Google
       </Button>
     )

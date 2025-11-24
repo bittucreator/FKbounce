@@ -169,7 +169,7 @@ export default function Home() {
               onClick={handleSignIn} 
               className="w-full items-center justify-center flex gap-2"
             >
-              <Lock className="h-5 w-5" /> Sign in with Google
+              <img src="/google.svg" alt="Google" className="h-4 w-4" /> Sign in with Google
             </Button>
             <p className="text-center text-xs text-[#5C5855] font-mono">
               Sign in to start verifying email addresses.
