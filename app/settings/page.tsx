@@ -7,14 +7,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Loader2, Save, Settings as SettingsIcon } from 'lucide-react'
+import { Loader2, Save, Settings as SettingsIcon, Trash2 } from 'lucide-react'
 import AppBreadcrumb from '@/components/AppBreadcrumb'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export default function SettingsPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [settings, setSettings] = useState({
     enable_catch_all_check: true,
     enable_domain_cache: true
@@ -71,6 +81,33 @@ export default function SettingsPage() {
     }
   }
 
+  const deleteAccount = async () => {
+    setDeleting(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      // Delete user account
+      const { error } = await supabase.auth.admin.deleteUser(user.id)
+      
+      if (error) {
+        // If admin API not available, sign out the user
+        await supabase.auth.signOut()
+        router.push('/')
+      } else {
+        // Account deleted successfully
+        await supabase.auth.signOut()
+        router.push('/')
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error)
+      alert('Failed to delete account. Please contact support.')
+    } finally {
+      setDeleting(false)
+      setShowDeleteDialog(false)
+    }
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#fafafa]">
@@ -100,11 +137,11 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3 mb-2">
             <SettingsIcon className="h-8 w-8 text-[#020202]" />
             <h2 className="text-3xl font-bold text-[#020202] font-[family-name:var(--font-geist)]">
-              Verification Settings
+              Settings
             </h2>
           </div>
           <p className="text-[#5C5855] font-mono text-sm">
-            Customize your email verification preferences
+            Manage your account settings and preferences
           </p>
         </div>
 
@@ -202,6 +239,74 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="border-red-200 bg-red-50/50">
+          <CardHeader>
+            <CardTitle className="text-red-600">Danger Zone</CardTitle>
+            <CardDescription>
+              Irreversible actions that will permanently affect your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-base font-semibold text-[#020202] mb-1">
+                  Delete Account
+                </h3>
+                <p className="text-sm text-[#5C5855]">
+                  Permanently delete your account and all associated data. This action cannot be undone.
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                onClick={() => setShowDeleteDialog(true)}
+                className="shrink-0"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Account
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Are you absolutely sure?</DialogTitle>
+              <DialogDescription className="space-y-2">
+                <p>
+                  This action cannot be undone. This will permanently delete your account and remove all your data from our servers.
+                </p>
+                <p className="font-semibold text-red-600">
+                  All your verification history, settings, and smart lists will be lost forever.
+                </p>
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteDialog(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={deleteAccount}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Account'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         </div>
       </div>
     </main>
