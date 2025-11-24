@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Mail, Calendar, Activity, Zap } from 'lucide-react'
 import { format, subDays, startOfDay } from 'date-fns'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import WebhookManager from '../../components/WebhookManager'
 
 interface DailyStats {
   date: string
@@ -310,10 +309,9 @@ export default function AnalyticsPage() {
 
         {/* Tabbed Charts */}
         <Tabs defaultValue="volume" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="volume">Volume</TabsTrigger>
             <TabsTrigger value="success">Success Rate</TabsTrigger>
-            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           </TabsList>
 
           <TabsContent value="volume">
@@ -384,10 +382,6 @@ export default function AnalyticsPage() {
                 </ResponsiveContainer>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="webhooks">
-            <WebhookManager />
           </TabsContent>
         </Tabs>
 

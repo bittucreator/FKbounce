@@ -13,6 +13,8 @@ import { Alert, AlertDescription } from '../../components/ui/alert'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../components/ui/accordion'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
 import { CodeBlock } from '../../components/ui/code-block'
+import WebhookManager from '../../components/WebhookManager'
+import WebhookConfigModal from '../../components/WebhookConfigModal'
 
 interface ApiKey {
   id: string
@@ -26,15 +28,6 @@ interface ApiStatus {
   endpoint: string
   status: 'checking' | 'operational' | 'error'
   responseTime?: number
-}
-
-interface Webhook {
-  id: string
-  url: string
-  secret: string
-  events: string[]
-  is_active: boolean
-  created_at: string
 }
 
 interface Analytics {
@@ -69,9 +62,6 @@ export default function ApiKeysPage() {
     { endpoint: 'Single Email Verification', status: 'checking' },
     { endpoint: 'Bulk Email Verification', status: 'checking' }
   ])
-  const [webhooks, setWebhooks] = useState<Webhook[]>([])
-  const [newWebhookUrl, setNewWebhookUrl] = useState('')
-  const [creatingWebhook, setCreatingWebhook] = useState(false)
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [activeTab, setActiveTab] = useState('keys')
   const router = useRouter()
@@ -79,7 +69,6 @@ export default function ApiKeysPage() {
 
   useEffect(() => {
     loadApiKeys()
-    loadWebhooks()
     loadAnalytics()
   }, [])
 
@@ -242,80 +231,6 @@ export default function ApiKeysPage() {
 
   const maskKey = (key: string) => {
     return key.substring(0, 11) + '•'.repeat(20) + key.substring(key.length - 8)
-  }
-
-  const loadWebhooks = async () => {
-    try {
-      const response = await fetch('/api/webhooks')
-      if (response.ok) {
-        const data = await response.json()
-        setWebhooks(data.webhooks || [])
-      }
-    } catch (error) {
-      console.error('Error loading webhooks:', error)
-    }
-  }
-
-  const handleCreateWebhook = async () => {
-    if (!newWebhookUrl.trim()) return
-
-    setCreatingWebhook(true)
-    try {
-      const response = await fetch('/api/webhooks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          url: newWebhookUrl,
-          events: ['bulk_verification_complete']
-        })
-      })
-
-      if (!response.ok) throw new Error('Failed to create webhook')
-
-      const data = await response.json()
-      alert(`Webhook created! Secret: ${data.webhook.secret}\n\nSave this secret securely - it will not be shown again.`)
-      setNewWebhookUrl('')
-      await loadWebhooks()
-    } catch (error) {
-      console.error('Error creating webhook:', error)
-      alert('Failed to create webhook')
-    } finally {
-      setCreatingWebhook(false)
-    }
-  }
-
-  const handleToggleWebhook = async (webhookId: string, isActive: boolean) => {
-    try {
-      const response = await fetch('/api/webhooks', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: webhookId, is_active: !isActive })
-      })
-
-      if (!response.ok) throw new Error('Failed to update webhook')
-
-      await loadWebhooks()
-    } catch (error) {
-      console.error('Error updating webhook:', error)
-      alert('Failed to update webhook')
-    }
-  }
-
-  const handleDeleteWebhook = async (webhookId: string) => {
-    if (!confirm('Are you sure you want to delete this webhook?')) return
-
-    try {
-      const response = await fetch(`/api/webhooks?id=${webhookId}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) throw new Error('Failed to delete webhook')
-
-      await loadWebhooks()
-    } catch (error) {
-      console.error('Error deleting webhook:', error)
-      alert('Failed to delete webhook')
-    }
   }
 
   const loadAnalytics = async () => {
@@ -538,81 +453,7 @@ export default function ApiKeysPage() {
 
           {/* Webhooks Tab */}
           <TabsContent value="webhooks" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Webhook Configuration</CardTitle>
-                <CardDescription>
-                  Receive real-time notifications when bulk verifications complete
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="https://your-domain.com/webhook"
-                    value={newWebhookUrl}
-                    onChange={(e) => setNewWebhookUrl(e.target.value)}
-                  />
-                  <Button onClick={handleCreateWebhook} disabled={creatingWebhook || !newWebhookUrl.trim()}>
-                    {creatingWebhook ? 'Creating...' : 'Create'}
-                  </Button>
-                </div>
-                <p className="text-xs text-[#5C5855]">
-                  Webhooks will receive a POST request with the verification results and an HMAC signature for security.
-                </p>
-              </CardContent>
-            </Card>
-
-            {webhooks.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Active Webhooks</CardTitle>
-                  <CardDescription>{webhooks.length} webhook{webhooks.length > 1 ? 's' : ''} configured</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {webhooks.map((webhook) => (
-                      <div key={webhook.id} className="border rounded-lg p-4 space-y-3">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <code className="text-sm font-mono bg-[#f5f5f5] px-2 py-1 rounded">
-                                {webhook.url}
-                              </code>
-                              <Badge variant={webhook.is_active ? 'default' : 'secondary'}>
-                                {webhook.is_active ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-[#5C5855]">
-                              Events: {webhook.events.join(', ')}
-                            </p>
-                            <p className="text-xs text-[#5C5855] mt-1">
-                              Secret: {webhook.secret}
-                            </p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleToggleWebhook(webhook.id, webhook.is_active)}
-                            >
-                              {webhook.is_active ? 'Disable' : 'Enable'}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteWebhook(webhook.id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <WebhookManager />
           </TabsContent>
 
           {/* Analytics Tab */}
