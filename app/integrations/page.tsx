@@ -152,80 +152,27 @@ function IntegrationsContent() {
           </Alert>
         )}
 
-        {/* Zapier Integration */}
-        <Card className="mb-6">
+        {/* Zapier Integration - Hidden for now */}
+        {/* <Card className="mb-6">
+          ... Zapier integration card ...
+        </Card> */}
+
+        {/* Coming Soon Section */}
+        <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img src="/zapier.jpeg" alt="Zapier" className="h-10 w-10 rounded" />
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    Zapier
-                    {zapierConnection.connected && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Connected
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription>
-                    Connect to 7000+ apps including HubSpot, Salesforce, Google Sheets, Airtable, and more
-                  </CardDescription>
-                </div>
+            <CardTitle>More Integrations Coming Soon</CardTitle>
+            <CardDescription>
+              We're working on integrations with popular tools and platforms
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 border rounded-lg opacity-50">
+                <img src="/zapier.jpeg" alt="Zapier" className="h-12 w-12 mx-auto mb-2 rounded" />
+                <p className="text-xs font-medium">Zapier</p>
+                <Badge variant="secondary" className="text-xs mt-1">Coming Soon</Badge>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!zapierConnection.connected ? (
-              <>
-                <Alert>
-                  <AlertDescription>
-                    Use Zapier to connect FKbounce with thousands of apps. Automate email verification workflows, 
-                    sync with CRMs, update spreadsheets, and more - all without code.
-                  </AlertDescription>
-                </Alert>
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm">Popular Workflows:</h4>
-                  <ul className="list-disc list-inside text-sm text-[#5C5855] space-y-1">
-                    <li>Verify emails from Google Sheets → Update status automatically</li>
-                    <li>New HubSpot contact → Verify email → Update contact</li>
-                    <li>Salesforce lead → Verify email → Qualify lead</li>
-                    <li>Bulk job completed → Send Slack notification</li>
-                    <li>Typeform submission → Verify email → Add to CRM</li>
-                  </ul>
-                </div>
-                <Button onClick={() => window.open('https://zapier.com', '_blank')} className="w-full">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Set Up Zapier Integration
-                </Button>
-                <p className="text-xs text-[#5C5855] text-center">
-                  Get your API key from the API Keys page to connect with Zapier
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div>
-                      <p className="font-semibold text-sm">Zapier Connected</p>
-                      <p className="text-xs text-[#5C5855]">Using API key authentication</p>
-                    </div>
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  </div>
-
-                  <Alert>
-                    <AlertDescription className="text-xs">
-                      <strong>Available Triggers:</strong> Email Verified, Bulk Job Completed<br/>
-                      <strong>Available Actions:</strong> Verify Single Email, Verify Multiple Emails
-                    </AlertDescription>
-                  </Alert>
-                </div>
-
-                <Button onClick={() => disconnectIntegration('zapier', setZapierConnection)} variant="destructive" className="w-full">
-                  Disconnect Zapier
-                </Button>
-              </>
-            )}
           </CardContent>
         </Card>
       </div>
