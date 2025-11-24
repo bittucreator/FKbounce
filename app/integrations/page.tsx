@@ -38,6 +38,7 @@ function IntegrationsContent() {
   const [notionConnection, setNotionConnection] = useState<NotionConnection>({ connected: false })
   const [selectedDatabase, setSelectedDatabase] = useState<string>('')
   const [saving, setSaving] = useState(false)
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false)
 
   useEffect(() => {
     checkAuth()
@@ -48,7 +49,10 @@ function IntegrationsContent() {
     const notionError = searchParams.get('notion_error')
     
     if (notionSuccess) {
+      setShowSuccessAlert(true)
       fetchNotionConnection()
+      // Clear the success message after 5 seconds
+      setTimeout(() => setShowSuccessAlert(false), 5000)
     }
     
     if (notionError) {
@@ -180,6 +184,16 @@ function IntegrationsContent() {
             Connect FKbounce with your favorite tools and services
           </p>
         </div>
+
+        {/* Success Alert */}
+        {showSuccessAlert && (
+          <Alert className="mb-6 bg-green-50 border-green-200">
+            <CheckCircle2 className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              Successfully connected to Notion! You can now save verified emails to your Notion databases.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Notion Integration Card */}
         <Card>

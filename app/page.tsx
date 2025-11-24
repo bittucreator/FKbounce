@@ -161,11 +161,8 @@ export default function Home() {
         <Card className="w-full max-w-md mx-auto h-[350px] z-20 mb-8 xl:mb-0 flex flex-col items-center justify-center">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <img src="/favicon.svg" alt="FKbounce" className="h-12 w-auto" />
+              <img src="/Mainlogo.png" alt="FKbounce" className="h-16 w-auto" />
             </div>
-            <CardTitle className="text-3xl font-[family-name:var(--font-geist)] text-[#020202]">
-              FKbounce
-            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button 

@@ -22,12 +22,15 @@ export class NotionClient {
 
   async listDatabases(): Promise<NotionDatabase[]> {
     try {
+      // Search for databases without filter - Notion API changed
       const response = await this.client.search({
-        filter: { property: 'object', value: 'database' } as any,
         page_size: 100,
       })
 
-      return response.results.map((db: any) => ({
+      // Filter databases from the results
+      const databases = response.results.filter((item: any) => item.object === 'database')
+
+      return databases.map((db: any) => ({
         id: db.id,
         title: db.title?.[0]?.plain_text || 'Untitled',
         icon: db.icon?.emoji || null,

@@ -57,6 +57,8 @@ export default function BulkVerifier() {
   const [savingToList, setSavingToList] = useState(false)
   const [savingToNotion, setSavingToNotion] = useState(false)
   const [notionConnected, setNotionConnected] = useState(false)
+  const [notionWorkspace, setNotionWorkspace] = useState<string>('')
+  const [notionDatabase, setNotionDatabase] = useState<string>('')
   const [progress, setProgress] = useState(0)
   const [verificationSpeed, setVerificationSpeed] = useState(0)
   const [currentEmail, setCurrentEmail] = useState('')
@@ -87,6 +89,12 @@ export default function BulkVerifier() {
       if (response.ok) {
         const data = await response.json()
         setNotionConnected(data.connected && data.selected_database_id)
+        if (data.connected) {
+          setNotionWorkspace(data.workspace_name || '')
+          // Find the selected database name
+          const selectedDb = data.databases?.find((db: any) => db.id === data.selected_database_id)
+          setNotionDatabase(selectedDb?.title || 'Selected Database')
+        }
       }
     } catch (err) {
       console.error('Failed to check Notion connection:', err)
@@ -651,7 +659,7 @@ export default function BulkVerifier() {
                 {notionConnected ? (
                   <Button 
                     variant="outline" 
-                    className="w-full"
+                    className="w-full flex-col h-auto py-3"
                     onClick={saveToNotion}
                     disabled={savingToNotion}
                   >
@@ -662,10 +670,15 @@ export default function BulkVerifier() {
                       </>
                     ) : (
                       <>
-                        <svg className="h-4 w-4 mr-2" viewBox="0 0 100 100" fill="currentColor">
-                          <path d="M6.017 4.313l55.333 -4.087c6.797 -0.583 8.543 -0.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277 -1.553 6.807 -6.99 7.193L24.467 99.967c-4.08 0.193 -6.023 -0.39 -8.16 -3.113L3.3 79.94c-2.333 -3.113 -3.3 -5.443 -3.3 -8.167V11.113c0 -3.497 1.553 -6.413 6.017 -6.8z"/>
-                        </svg>
-                        Save All to Notion ({results.total} emails)
+                        <div className="flex items-center gap-2 w-full justify-center">
+                          <svg className="h-4 w-4" viewBox="0 0 100 100" fill="currentColor">
+                            <path d="M6.017 4.313l55.333 -4.087c6.797 -0.583 8.543 -0.19 12.817 2.917l17.663 12.443c2.913 2.14 3.883 2.723 3.883 5.053v68.243c0 4.277 -1.553 6.807 -6.99 7.193L24.467 99.967c-4.08 0.193 -6.023 -0.39 -8.16 -3.113L3.3 79.94c-2.333 -3.113 -3.3 -5.443 -3.3 -8.167V11.113c0 -3.497 1.553 -6.413 6.017 -6.8z"/>
+                          </svg>
+                          <span className="font-semibold">Save All to Notion ({results.total} emails)</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {notionWorkspace} → {notionDatabase}
+                        </div>
                       </>
                     )}
                   </Button>
