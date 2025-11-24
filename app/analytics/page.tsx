@@ -5,8 +5,13 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Mail, Calendar } from 'lucide-react'
+import { Progress } from '../../components/ui/progress'
+import { Badge } from '../../components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { ArrowLeft, TrendingUp, CheckCircle, XCircle, Mail, Calendar, Activity, Zap } from 'lucide-react'
 import { format, subDays, startOfDay } from 'date-fns'
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import WebhookManager from '../../components/WebhookManager'
 
 interface DailyStats {
   date: string
@@ -35,6 +40,17 @@ export default function AnalyticsPage() {
     singleVerifications: 0,
     bulkVerifications: 0
   })
+  const [quotaInfo, setQuotaInfo] = useState({
+    used: 0,
+    limit: 500,
+    remaining: 500,
+    plan: 'free'
+  })
+  const [rateLimitInfo, setRateLimitInfo] = useState({
+    limit: 120,
+    remaining: 120,
+    reset: new Date()
+  })
   const router = useRouter()
   const supabase = createClient()
 
@@ -48,6 +64,30 @@ export default function AnalyticsPage() {
     if (!user) {
       router.push('/')
       return
+    }
+
+    // Fetch user plan info
+    const { data: userPlan } = await supabase
+      .from('user_plans')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (userPlan) {
+      setQuotaInfo({
+        used: userPlan.verifications_used || 0,
+        limit: userPlan.verifications_limit || 500,
+        remaining: (userPlan.verifications_limit || 500) - (userPlan.verifications_used || 0),
+        plan: userPlan.plan || 'free'
+      })
+      
+      // Set rate limit based on plan
+      const isPro = userPlan.plan === 'pro'
+      setRateLimitInfo({
+        limit: isPro ? 600 : 120,
+        remaining: isPro ? 600 : 120,
+        reset: new Date(Date.now() + 60000)
+      })
     }
 
     // Fetch verification history for last 30 days
@@ -210,7 +250,148 @@ export default function AnalyticsPage() {
           </Card>
         </div>
 
-        {/* Charts */}
+        {/* API Quota and Rate Limit */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>API Quota</CardTitle>
+                <Badge variant={quotaInfo.plan === 'pro' ? 'default' : 'secondary'}>
+                  {quotaInfo.plan.toUpperCase()}
+                </Badge>
+              </div>
+              <CardDescription>Monthly verification limit</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">
+                    {quotaInfo.remaining.toLocaleString()} / {quotaInfo.limit.toLocaleString()} remaining
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {quotaInfo.used.toLocaleString()} used this month
+                  </p>
+                </div>
+                <Badge variant={(quotaInfo.remaining / quotaInfo.limit) > 0.2 ? 'default' : 'destructive'}>
+                  {((quotaInfo.remaining / quotaInfo.limit) * 100).toFixed(1)}% left
+                </Badge>
+              </div>
+              <Progress 
+                value={(quotaInfo.remaining / quotaInfo.limit) * 100} 
+                className="h-2"
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                <CardTitle>Rate Limit</CardTitle>
+              </div>
+              <CardDescription>Requests per minute</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-2xl font-bold">{rateLimitInfo.remaining}</p>
+                  <p className="text-xs text-gray-600">
+                    of {rateLimitInfo.limit} requests remaining
+                  </p>
+                </div>
+                <Activity className="h-8 w-8 text-blue-500" />
+              </div>
+              <p className="text-xs text-gray-600">
+                Resets at {format(rateLimitInfo.reset, 'h:mm a')}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabbed Charts */}
+        <Tabs defaultValue="volume" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="volume">Volume</TabsTrigger>
+            <TabsTrigger value="success">Success Rate</TabsTrigger>
+            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="volume">
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Verification Volume</CardTitle>
+                <CardDescription>Last 14 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={dailyStats.slice(-14).map(d => ({
+                    ...d,
+                    date: format(new Date(d.date), 'MMM dd')
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line 
+                      type="monotone" 
+                      dataKey="total" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2}
+                      name="Total"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="valid" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      name="Valid"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="invalid" 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      name="Invalid"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="success">
+            <Card>
+              <CardHeader>
+                <CardTitle>Success Rate Trend</CardTitle>
+                <CardDescription>Percentage of valid verifications</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={dailyStats.slice(-14).map(d => ({
+                    ...d,
+                    date: format(new Date(d.date), 'MMM dd')
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip />
+                    <Bar 
+                      dataKey="successRate" 
+                      fill="#3b82f6"
+                      name="Success Rate (%)"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="webhooks">
+            <WebhookManager />
+          </TabsContent>
+        </Tabs>
+
+        {/* Charts - keeping original bar charts below */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Daily Verification Volume */}
           <Card>

@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 import { dnsCache } from '@/lib/dns-cache'
 import { getDomainCache, setDomainCache } from '@/lib/domain-cache'
+import { analyzeEmailIntelligence } from '@/lib/email-intelligence'
+import { sendVerificationWebhook, sendQuotaWarningWebhook, sendQuotaExceededWebhook } from '@/lib/webhooks/delivery'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -21,6 +23,16 @@ interface VerificationResult {
   disposable: boolean
   catch_all: boolean
   message: string
+  // Advanced intelligence
+  reputation_score?: number
+  is_spam_trap?: boolean
+  is_role_based?: boolean
+  role_type?: string
+  email_age?: string
+  domain_health_score?: number
+  inbox_placement_score?: number
+  mx_priority?: number[]
+  insights?: string[]
 }
 
 async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0): Promise<boolean> {
@@ -308,6 +320,31 @@ export async function POST(request: NextRequest) {
 
     const result = await verifyEmail(email, enableCatchAll, enableCache)
     
+    // Add advanced email intelligence
+    try {
+      const intelligence = await analyzeEmailIntelligence(
+        email,
+        result.syntax,
+        result.dns,
+        result.smtp,
+        result.disposable,
+        result.catch_all
+      )
+      
+      result.reputation_score = intelligence.reputationScore
+      result.is_spam_trap = intelligence.isSpamTrap
+      result.is_role_based = intelligence.isRoleBased
+      result.role_type = intelligence.roleType
+      result.email_age = intelligence.estimatedAge
+      result.domain_health_score = intelligence.domainHealthScore
+      result.inbox_placement_score = intelligence.inboxPlacementScore
+      result.mx_priority = intelligence.mxPriority
+      result.insights = intelligence.insights
+    } catch (intelligenceError) {
+      console.error('Error analyzing email intelligence:', intelligenceError)
+      // Don't fail the request if intelligence analysis fails
+    }
+    
     // Save to history and increment usage count
     try {
       await supabase.from('verification_history').insert({
@@ -320,13 +357,40 @@ export async function POST(request: NextRequest) {
       })
 
       // Increment verification count
+      const newCount = (userPlan?.verifications_used || 0) + 1
       await supabase
         .from('user_plans')
         .update({ 
-          verifications_used: (userPlan?.verifications_used || 0) + 1,
+          verifications_used: newCount,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
+
+      // Check quota and send webhook warnings
+      const quotaLimit = userPlan?.verifications_limit || 500
+      const percentageUsed = (newCount / quotaLimit) * 100
+
+      // Fetch user's webhooks
+      const { data: webhooks } = await supabase
+        .from('webhook_configs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+
+      if (webhooks && webhooks.length > 0) {
+        // Send verification completed/failed webhook
+        sendVerificationWebhook(webhooks, result).catch(console.error)
+
+        // Send quota warning at 80% usage
+        if (percentageUsed >= 80 && percentageUsed < 100) {
+          sendQuotaWarningWebhook(webhooks, quotaLimit - newCount, quotaLimit).catch(console.error)
+        }
+
+        // Send quota exceeded webhook at 100%
+        if (percentageUsed >= 100) {
+          sendQuotaExceededWebhook(webhooks, quotaLimit).catch(console.error)
+        }
+      }
     } catch (historyError) {
       console.error('Error saving history:', historyError)
       // Don't fail the request if history save fails

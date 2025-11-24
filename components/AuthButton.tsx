@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { LogOut, History, CreditCard, Key, BarChart3, FolderOpen, Settings } from 'lucide-react'
+import { Kbd, KbdGroup } from '@/components/ui/kbd'
 
 export default function AuthButton() {
   const [user, setUser] = useState<User | null>(null)
@@ -56,8 +57,50 @@ export default function AuthButton() {
       setUser(session?.user ?? null)
     })
 
-    return () => subscription.unsubscribe()
-  }, [supabase.auth])
+    // Keyboard shortcuts
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only trigger if user is logged in and G key is pressed
+      if (!user || e.key !== 'g') return
+
+      // Check if G is followed by another key
+      const handleSecondKey = (e2: KeyboardEvent) => {
+        e2.preventDefault()
+        switch (e2.key.toLowerCase()) {
+          case 'l':
+            router.push('/lists')
+            break
+          case 'h':
+            router.push('/history')
+            break
+          case 'a':
+            router.push('/analytics')
+            break
+          case 'k':
+            router.push('/api-keys')
+            break
+          case 's':
+            router.push('/settings')
+            break
+          case 'p':
+            router.push('/subscription')
+            break
+        }
+        document.removeEventListener('keydown', handleSecondKey)
+      }
+
+      document.addEventListener('keydown', handleSecondKey)
+      setTimeout(() => {
+        document.removeEventListener('keydown', handleSecondKey)
+      }, 1000)
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      subscription.unsubscribe()
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [supabase.auth, user, router])
 
   const handleSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -144,27 +187,51 @@ export default function AuthButton() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push('/lists')}>
           <FolderOpen className="mr-2 h-4 w-4" />
-          <span>Smart Lists</span>
+          <span>Lists</span>
+          <KbdGroup className="ml-auto">
+            <Kbd>G</Kbd>
+            <Kbd>L</Kbd>
+          </KbdGroup>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/history')}>
           <History className="mr-2 h-4 w-4" />
-          <span>Verification History</span>
+          <span>History</span>
+          <KbdGroup className="ml-auto">
+            <Kbd>G</Kbd>
+            <Kbd>H</Kbd>
+          </KbdGroup>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/analytics')}>
           <BarChart3 className="mr-2 h-4 w-4" />
-          <span>Usage Analytics</span>
+          <span>Analytics</span>
+          <KbdGroup className="ml-auto">
+            <Kbd>G</Kbd>
+            <Kbd>A</Kbd>
+          </KbdGroup>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/api-keys')}>
           <Key className="mr-2 h-4 w-4" />
-          <span>API Keys</span>
+          <span>API</span>
+          <KbdGroup className="ml-auto">
+            <Kbd>G</Kbd>
+            <Kbd>K</Kbd>
+          </KbdGroup>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/settings')}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Settings</span>
+          <KbdGroup className="ml-auto">
+            <Kbd>G</Kbd>
+            <Kbd>S</Kbd>
+          </KbdGroup>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/subscription')}>
           <CreditCard className="mr-2 h-4 w-4" />
-          <span>Manage Subscription</span>
+          <span>Subscription</span>
+          <KbdGroup className="ml-auto">
+            <Kbd>G</Kbd>
+            <Kbd>P</Kbd>
+          </KbdGroup>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>

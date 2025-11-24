@@ -1,4 +1,4 @@
-# ✅ Azure Setup Complete!
+# ✅ Azure Setup Complete
 
 Your Azure Function App for email verification workers has been successfully deployed.
 
@@ -12,7 +12,8 @@ Your Azure Function App for email verification workers has been successfully dep
 4. **Application Insights**: Monitoring enabled
 
 ### Function URL
-- https://email-verifier-workers.azurewebsites.net
+
+- <https://email-verifier-workers.azurewebsites.net>
 
 ## 🔑 Next Steps: Add to Vercel
 
@@ -31,6 +32,7 @@ AZURE_QUEUE_NAME=email-verification-jobs
 ```
 
 **To get your connection string:**
+
 ```bash
 az storage account show-connection-string \
   --name emailverifierstorage \
@@ -83,9 +85,11 @@ The system will automatically route to Azure for processing!
 ## 📊 Monitoring
 
 ### Azure Portal
-https://portal.azure.com/#resource/subscriptions/dcc45adf-67ec-4a05-93aa-5248b40855f5/resourceGroups/EmailVerifierWorkers/providers/microsoft.insights/components/email-verifier-workers/overview
+
+<https://portal.azure.com/#resource/subscriptions/dcc45adf-67ec-4a05-93aa-5248b40855f5/resourceGroups/EmailVerifierWorkers/providers/microsoft.insights/components/email-verifier-workers/overview>
 
 ### View Logs
+
 ```bash
 az functionapp logs tail \
   --name email-verifier-workers \
@@ -93,6 +97,7 @@ az functionapp logs tail \
 ```
 
 ### Check Queue Status
+
 ```bash
 az storage queue list \
   --connection-string "YOUR_CONNECTION_STRING"
@@ -101,17 +106,20 @@ az storage queue list \
 ## 💰 Cost Estimate
 
 **Consumption Plan (Pay-per-use)**:
+
 - First 1M executions: **FREE**
 - Additional executions: $0.20 per million
 - Execution time: $0.000016/GB-second
 
 **Example**:
+
 - 100K emails processed: ~$0.01
 - 1M emails processed: ~$0.10
 
 ## 🔧 Management Commands
 
 ### Update Function Settings
+
 ```bash
 az functionapp config appsettings set \
   --name email-verifier-workers \
@@ -120,6 +128,7 @@ az functionapp config appsettings set \
 ```
 
 ### Restart Function
+
 ```bash
 az functionapp restart \
   --name email-verifier-workers \
@@ -127,6 +136,7 @@ az functionapp restart \
 ```
 
 ### Delete Resources (when done testing)
+
 ```bash
 az group delete --name EmailVerifierWorkers --yes --no-wait
 ```
@@ -142,6 +152,7 @@ az group delete --name EmailVerifierWorkers --yes --no-wait
 ✅ Application Insights configured
 
 ⏳ Pending:
+
 - Add environment variables to Vercel
 - Install @azure/storage-queue in main project
 - Redeploy Vercel

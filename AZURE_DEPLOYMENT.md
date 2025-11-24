@@ -92,7 +92,6 @@ npm install @azure/storage-queue
 
 ### How It Works
 
-```
 User Request (100K emails)
     ↓
 Vercel API (/api/verify-bulk)
@@ -110,7 +109,6 @@ Sends results to Vercel callback
 Vercel updates database + webhooks
     ↓
 User receives completion notification
-```
 
 ### Benefits
 
@@ -123,11 +121,13 @@ User receives completion notification
 ### Cost Estimate
 
 **Azure Functions Consumption Plan:**
+
 - First 1 million executions: FREE
 - After: $0.20 per million executions
 - Execution time: $0.000016/GB-s
 
-**Example: 1M email verification**
+#### Example: 1M email verification
+
 - ~50-60 minutes execution
 - ~4GB memory = ~240 GB-seconds
 - Cost: ~$0.004 (less than 1 cent!)
@@ -144,6 +144,7 @@ Then trigger a test job from Vercel dev server.
 ### Monitoring
 
 View logs in Azure Portal:
+
 ```bash
 az functionapp logs tail \
   --name email-verifier-workers \
@@ -153,6 +154,7 @@ az functionapp logs tail \
 ---
 
 **Next Steps:**
+
 1. Deploy Azure Function
 2. Update Vercel env vars
 3. Install @azure/storage-queue in main project

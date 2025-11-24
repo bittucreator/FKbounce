@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
+// @ts-ignore
 import './globals.css'
 import NavigationWrapper from '../components/NavigationWrapper'
 import { ThemeProvider } from '../components/ThemeProvider'

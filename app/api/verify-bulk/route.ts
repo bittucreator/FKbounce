@@ -7,7 +7,9 @@ import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 import { dnsCache } from '@/lib/dns-cache'
 import { deliverWebhook, WebhookPayload } from '@/lib/webhook-delivery'
+import { sendBatchProgressWebhook, sendBatchWebhook, sendQuotaWarningWebhook, sendQuotaExceededWebhook } from '@/lib/webhooks/delivery'
 import { verifyEmailsParallel, estimateVerificationTime } from '@/lib/parallel-verifier'
+import { analyzeEmailIntelligence } from '@/lib/email-intelligence'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -22,6 +24,16 @@ interface VerificationResult {
   disposable: boolean
   catch_all: boolean
   message: string
+  // Advanced intelligence
+  reputation_score?: number
+  is_spam_trap?: boolean
+  is_role_based?: boolean
+  role_type?: string
+  email_age?: string
+  domain_health_score?: number
+  inbox_placement_score?: number
+  mx_priority?: number[]
+  insights?: string[]
 }
 
 interface BulkVerificationResponse {
@@ -380,6 +392,19 @@ export async function POST(request: NextRequest) {
                   .eq('id', jobId)
               }
 
+              // Send batch progress webhook every 10%
+              if (progressPercentage % 10 === 0 && progressPercentage > 0) {
+                const { data: webhooks } = await supabase
+                  .from('webhook_configs')
+                  .select('*')
+                  .eq('user_id', user.id)
+                  .eq('is_active', true)
+
+                if (webhooks && webhooks.length > 0 && jobId) {
+                  sendBatchProgressWebhook(webhooks, jobId, processedCount, uniqueEmails.length).catch(console.error)
+                }
+              }
+
               const progressData = {
                 type: 'progress',
                 processed: processedCount,
@@ -396,14 +421,46 @@ export async function POST(request: NextRequest) {
             }
           })
 
+          // Add advanced email intelligence to each result
+          const resultsWithIntelligence = await Promise.all(
+            results.map(async (result) => {
+              try {
+                const intelligence = await analyzeEmailIntelligence(
+                  result.email,
+                  result.syntax,
+                  result.dns,
+                  result.smtp,
+                  result.disposable,
+                  result.catch_all
+                )
+                
+                return {
+                  ...result,
+                  reputation_score: intelligence.reputationScore,
+                  is_spam_trap: intelligence.isSpamTrap,
+                  is_role_based: intelligence.isRoleBased,
+                  role_type: intelligence.roleType,
+                  email_age: intelligence.estimatedAge,
+                  domain_health_score: intelligence.domainHealthScore,
+                  inbox_placement_score: intelligence.inboxPlacementScore,
+                  mx_priority: intelligence.mxPriority,
+                  insights: intelligence.insights
+                }
+              } catch (error) {
+                // Return original result if intelligence analysis fails
+                return result
+              }
+            })
+          )
+
           const response: BulkVerificationResponse = {
             total: emails.length,
             unique: uniqueEmails.length,
             duplicates: duplicates.length,
             duplicateEmails: duplicates,
-            valid: results.filter(r => r.valid).length,
-            invalid: results.filter(r => !r.valid).length,
-            results
+            valid: resultsWithIntelligence.filter(r => r.valid).length,
+            invalid: resultsWithIntelligence.filter(r => !r.valid).length,
+            results: resultsWithIntelligence
           }
 
           // Save to history
@@ -414,7 +471,7 @@ export async function POST(request: NextRequest) {
               email_count: uniqueEmails.length,
               valid_count: response.valid,
               invalid_count: response.invalid,
-              results: results
+              results: resultsWithIntelligence
             })
 
             await supabase
@@ -431,7 +488,7 @@ export async function POST(request: NextRequest) {
                 .from('verification_jobs')
                 .update({
                   status: 'completed',
-                  results: results,
+                  results: resultsWithIntelligence,
                   completed_at: new Date().toISOString(),
                 })
                 .eq('id', jobId)
@@ -444,33 +501,19 @@ export async function POST(request: NextRequest) {
                 .eq('is_active', true)
 
               if (webhooks && webhooks.length > 0) {
-                const payload: WebhookPayload = {
-                  event: 'bulk_verification_complete',
-                  job_id: jobId,
-                  timestamp: new Date().toISOString(),
-                  data: {
-                    total: response.total,
-                    unique: response.unique,
-                    valid: response.valid,
-                    invalid: response.invalid,
-                    duplicates: response.duplicates,
-                  }
-                }
+                // Send batch completed webhook
+                sendBatchWebhook(webhooks, jobId, resultsWithIntelligence).catch(console.error)
 
-                // Deliver webhooks asynchronously
-                for (const webhook of webhooks) {
-                  deliverWebhook(webhook, payload).then(async (result) => {
-                    await supabase.from('webhook_deliveries').insert({
-                      webhook_config_id: webhook.id,
-                      verification_job_id: jobId,
-                      event_type: payload.event,
-                      payload: payload,
-                      status: result.success ? 'success' : 'failed',
-                      response_code: result.statusCode,
-                      response_body: result.responseBody,
-                      delivered_at: result.success ? new Date().toISOString() : null,
-                    })
-                  }).catch(console.error)
+                // Check quota and send warnings
+                const quotaLimit = userPlan?.verifications_limit || 500
+                const newVerificationCount = (userPlan?.verifications_used || 0) + uniqueEmails.length
+                const percentageUsed = (newVerificationCount / quotaLimit) * 100
+
+                if (percentageUsed >= 80 && percentageUsed < 100) {
+                  sendQuotaWarningWebhook(webhooks, quotaLimit - newVerificationCount, quotaLimit).catch(console.error)
+                }
+                if (percentageUsed >= 100) {
+                  sendQuotaExceededWebhook(webhooks, quotaLimit).catch(console.error)
                 }
               }
             }
@@ -505,14 +548,45 @@ export async function POST(request: NextRequest) {
       enableCatchAll: true,
     })
 
+    // Add advanced email intelligence to each result
+    const resultsWithIntelligence = await Promise.all(
+      results.map(async (result) => {
+        try {
+          const intelligence = await analyzeEmailIntelligence(
+            result.email,
+            result.syntax,
+            result.dns,
+            result.smtp,
+            result.disposable,
+            result.catch_all
+          )
+          
+          return {
+            ...result,
+            reputation_score: intelligence.reputationScore,
+            is_spam_trap: intelligence.isSpamTrap,
+            is_role_based: intelligence.isRoleBased,
+            role_type: intelligence.roleType,
+            email_age: intelligence.estimatedAge,
+            domain_health_score: intelligence.domainHealthScore,
+            inbox_placement_score: intelligence.inboxPlacementScore,
+            mx_priority: intelligence.mxPriority,
+            insights: intelligence.insights
+          }
+        } catch (error) {
+          return result
+        }
+      })
+    )
+
     const response: BulkVerificationResponse = {
       total: emails.length,
       unique: uniqueEmails.length,
       duplicates: duplicates.length,
       duplicateEmails: duplicates,
-      valid: results.filter(r => r.valid).length,
-      invalid: results.filter(r => !r.valid).length,
-      results
+      valid: resultsWithIntelligence.filter(r => r.valid).length,
+      invalid: resultsWithIntelligence.filter(r => !r.valid).length,
+      results: resultsWithIntelligence
     }
 
     // Save to history and increment usage count (only unique emails)
@@ -523,7 +597,7 @@ export async function POST(request: NextRequest) {
         email_count: uniqueEmails.length,
         valid_count: response.valid,
         invalid_count: response.invalid,
-        results: results
+        results: resultsWithIntelligence
       })
 
       // Increment verification count (only unique emails)

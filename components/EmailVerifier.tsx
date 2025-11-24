@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../components/ui/dialog'
+import { Progress } from '../components/ui/progress'
 
 interface VerificationResult {
   email: string
@@ -24,6 +25,16 @@ interface VerificationResult {
   disposable: boolean
   catch_all: boolean
   message: string
+  // Advanced intelligence
+  reputation_score?: number
+  is_spam_trap?: boolean
+  is_role_based?: boolean
+  role_type?: string
+  email_age?: string
+  domain_health_score?: number
+  inbox_placement_score?: number
+  mx_priority?: number[]
+  insights?: string[]
 }
 
 export default function EmailVerifier() {
@@ -384,6 +395,126 @@ export default function EmailVerifier() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Advanced Email Intelligence */}
+            {result.reputation_score !== undefined && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Email Intelligence</CardTitle>
+                  <CardDescription>Advanced analysis and reputation metrics</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Reputation Score */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Reputation Score</span>
+                      <span className="text-2xl font-bold">{result.reputation_score}/100</span>
+                    </div>
+                    <Progress 
+                      value={result.reputation_score} 
+                      className={`h-3 ${
+                        result.reputation_score >= 80 ? 'bg-green-100 [&>div]:bg-green-600' :
+                        result.reputation_score >= 60 ? 'bg-blue-100 [&>div]:bg-blue-600' :
+                        result.reputation_score >= 40 ? 'bg-yellow-100 [&>div]:bg-yellow-600' :
+                        'bg-red-100 [&>div]:bg-red-600'
+                      }`}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {result.reputation_score >= 80 ? '✅ Excellent reputation' :
+                       result.reputation_score >= 60 ? '✓ Good reputation' :
+                       result.reputation_score >= 40 ? '⚠ Moderate reputation' :
+                       '❌ Poor reputation'}
+                    </p>
+                  </div>
+
+                  {/* Inbox Placement Score */}
+                  {result.inbox_placement_score !== undefined && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Inbox Placement Probability</span>
+                        <span className="text-lg font-semibold">{result.inbox_placement_score}%</span>
+                      </div>
+                      <Progress 
+                        value={result.inbox_placement_score} 
+                        className={`h-2 ${
+                          result.inbox_placement_score >= 70 ? 'bg-green-100 [&>div]:bg-green-500' :
+                          result.inbox_placement_score >= 40 ? 'bg-yellow-100 [&>div]:bg-yellow-500' :
+                          'bg-red-100 [&>div]:bg-red-500'
+                        }`}
+                      />
+                    </div>
+                  )}
+
+                  {/* Domain Health Score */}
+                  {result.domain_health_score !== undefined && (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Domain Health</span>
+                        <span className="text-lg font-semibold">{result.domain_health_score}/100</span>
+                      </div>
+                      <Progress 
+                        value={result.domain_health_score} 
+                        className={`h-2 ${
+                          result.domain_health_score >= 70 ? 'bg-green-100 [&>div]:bg-green-500' :
+                          result.domain_health_score >= 40 ? 'bg-orange-100 [&>div]:bg-orange-500' :
+                          'bg-red-100 [&>div]:bg-red-500'
+                        }`}
+                      />
+                    </div>
+                  )}
+
+                  {/* Warning Badges */}
+                  <div className="flex flex-wrap gap-2">
+                    {result.is_spam_trap && (
+                      <Badge variant="destructive" className="gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Spam Trap Detected
+                      </Badge>
+                    )}
+                    {result.is_role_based && (
+                      <Badge variant="secondary" className="gap-1">
+                        <Mail className="h-3 w-3" />
+                        Role-Based: {result.role_type}
+                      </Badge>
+                    )}
+                    {result.email_age && (
+                      <Badge variant="outline" className="gap-1">
+                        <Server className="h-3 w-3" />
+                        Age: {result.email_age}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* MX Priority */}
+                  {result.mx_priority && result.mx_priority.length > 0 && (
+                    <div>
+                      <span className="text-sm font-medium block mb-1">MX Records Priority</span>
+                      <div className="flex gap-1">
+                        {result.mx_priority.map((priority, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {priority}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Insights */}
+                  {result.insights && result.insights.length > 0 && (
+                    <div>
+                      <span className="text-sm font-medium block mb-2">Insights</span>
+                      <div className="space-y-2">
+                        {result.insights.map((insight, idx) => (
+                          <div key={idx} className="text-sm text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                            {insight}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
               <DialogTrigger asChild>

@@ -33,6 +33,16 @@ interface VerificationResult {
   disposable: boolean
   catch_all: boolean
   message: string
+  // Advanced intelligence
+  reputation_score?: number
+  is_spam_trap?: boolean
+  is_role_based?: boolean
+  role_type?: string
+  email_age?: string
+  domain_health_score?: number
+  inbox_placement_score?: number
+  mx_priority?: number[]
+  insights?: string[]
 }
 
 interface BulkVerificationResponse {
@@ -288,9 +298,25 @@ export default function BulkVerifier() {
 
     if (format === 'csv') {
       const csv = [
-        ['Email', 'Valid', 'Syntax', 'DNS', 'SMTP', 'Disposable', 'Catch-All', 'Message'].join(','),
+        ['Email', 'Valid', 'Syntax', 'DNS', 'SMTP', 'Disposable', 'Catch-All', 'Reputation Score', 'Spam Trap', 'Role-Based', 'Role Type', 'Email Age', 'Domain Health', 'Inbox Placement', 'Message'].join(','),
         ...results.results.map((r: VerificationResult) => 
-          [r.email, r.valid, r.syntax, r.dns, r.smtp, r.disposable, r.catch_all, `"${r.message}"`].join(',')
+          [
+            r.email, 
+            r.valid, 
+            r.syntax, 
+            r.dns, 
+            r.smtp, 
+            r.disposable, 
+            r.catch_all, 
+            r.reputation_score ?? '', 
+            r.is_spam_trap ? 'Yes' : 'No', 
+            r.is_role_based ? 'Yes' : 'No',
+            r.role_type ?? '',
+            r.email_age ?? '',
+            r.domain_health_score ?? '',
+            r.inbox_placement_score ?? '',
+            `"${r.message}"`
+          ].join(',')
         )
       ].join('\n')
 
@@ -312,6 +338,13 @@ export default function BulkVerifier() {
           SMTP: r.smtp ? 'Yes' : 'No',
           Disposable: r.disposable ? 'Yes' : 'No',
           'Catch-All': r.catch_all ? 'Yes' : 'No',
+          'Reputation Score': r.reputation_score ?? '',
+          'Spam Trap': r.is_spam_trap ? 'Yes' : 'No',
+          'Role-Based': r.is_role_based ? 'Yes' : 'No',
+          'Role Type': r.role_type ?? '',
+          'Email Age': r.email_age ?? '',
+          'Domain Health': r.domain_health_score ?? '',
+          'Inbox Placement': r.inbox_placement_score ?? '',
           Message: r.message
         }))
       )
@@ -643,6 +676,9 @@ export default function BulkVerifier() {
                           Catch-All
                         </div>
                       </TableHead>
+                      <TableHead className="text-center">Reputation</TableHead>
+                      <TableHead className="text-center">Risk</TableHead>
+                      <TableHead className="text-center">Inbox %</TableHead>
                       <TableHead>Message</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -700,6 +736,61 @@ export default function BulkVerifier() {
                             </Badge>
                           ) : (
                             <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {result.reputation_score !== undefined ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <span className={`text-sm font-semibold ${
+                                result.reputation_score >= 80 ? 'text-green-600' :
+                                result.reputation_score >= 60 ? 'text-blue-600' :
+                                result.reputation_score >= 40 ? 'text-yellow-600' :
+                                'text-red-600'
+                              }`}>
+                                {result.reputation_score}
+                              </span>
+                              <Progress 
+                                value={result.reputation_score} 
+                                className={`h-1 w-12 ${
+                                  result.reputation_score >= 80 ? 'bg-green-100 [&>div]:bg-green-600' :
+                                  result.reputation_score >= 60 ? 'bg-blue-100 [&>div]:bg-blue-600' :
+                                  result.reputation_score >= 40 ? 'bg-yellow-100 [&>div]:bg-yellow-600' :
+                                  'bg-red-100 [&>div]:bg-red-600'
+                                }`}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-col gap-1 items-center">
+                            {result.is_spam_trap && (
+                              <Badge variant="destructive" className="text-xs">
+                                <AlertTriangle className="h-2 w-2" />
+                              </Badge>
+                            )}
+                            {result.is_role_based && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Mail className="h-2 w-2" />
+                              </Badge>
+                            )}
+                            {!result.is_spam_trap && !result.is_role_based && (
+                              <span className="text-muted-foreground text-xs">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {result.inbox_placement_score !== undefined ? (
+                            <span className={`text-sm font-medium ${
+                              result.inbox_placement_score >= 70 ? 'text-green-600' :
+                              result.inbox_placement_score >= 40 ? 'text-yellow-600' :
+                              'text-red-600'
+                            }`}>
+                              {result.inbox_placement_score}%
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">-</span>
                           )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">

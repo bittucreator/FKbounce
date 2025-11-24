@@ -7,7 +7,7 @@ Your email verifier now supports **Azure Functions workers** for heavy bulk veri
 ## 📁 What Was Created
 
 ### Azure Functions (New Directory: `/azure-functions`)
-```
+
 azure-functions/
 ├── email-verifier-worker/
 │   ├── function.json          # Queue trigger config
@@ -16,42 +16,42 @@ azure-functions/
 ├── local.settings.json         # Environment variables
 ├── package.json                # Azure-specific dependencies
 └── tsconfig.json               # TypeScript config for Azure
-```
 
 ### Vercel Integration
-```
+
 lib/azure-worker-client.ts      # Queue client (enqueues jobs)
 app/api/azure-callback/route.ts # Receives results from Azure
-```
 
 ### Documentation
-```
+
 AZURE_DEPLOYMENT.md             # Complete setup guide
-```
 
 ## 🎯 How It Works
 
 ### Small Jobs (< 10K emails) → Vercel
-```
+
 User → Vercel API → Process inline → Return results
 ⏱️ Fast, no extra infrastructure needed
-```
 
 ### Large Jobs (≥ 10K emails) → Azure
-```
+
 User → Vercel API → Azure Queue → Azure Function → Callback → Vercel
 ⏱️ No timeout limits, powerful compute
-```
+
+User → Vercel API → Azure Queue → Azure Function → Callback → Vercel
+⏱️ No timeout limits, powerful compute
 
 ## 🚀 Deployment Steps
 
 ### 1. Install Azure Dependencies
+
 ```bash
 npm install @azure/storage-queue
 cd azure-functions && npm install && cd ..
 ```
 
 ### 2. Deploy to Azure (See AZURE_DEPLOYMENT.md)
+
 ```bash
 az login
 # Create resources (see full guide)
@@ -59,12 +59,14 @@ func azure functionapp publish email-verifier-workers
 ```
 
 ### 3. Add Vercel Environment Variables
+
 ```env
 AZURE_STORAGE_CONNECTION_STRING=your_connection_string
 ENABLE_AZURE_WORKERS=true
 ```
 
 ### 4. Test
+
 ```bash
 # Send 10K+ email verification request
 # Check Azure logs to see worker processing
@@ -74,11 +76,13 @@ az functionapp logs tail --name email-verifier-workers --resource-group EmailVer
 ## 💰 Cost Comparison
 
 ### Vercel Only
+
 - Function timeout: 10s (hobby), 60s (pro), 300s (enterprise)
 - 100K emails: ❌ Timeout (needs enterprise plan)
 - Memory: 1GB (hobby), 3GB (pro)
 
 ### Vercel + Azure
+
 - No timeout limits
 - 100K emails: ✅ ~5-6 minutes in Azure
 - 1M emails: ✅ ~50-60 minutes in Azure
@@ -96,6 +100,7 @@ export function shouldUseAzureWorkers(emailCount: number): boolean {
 ```
 
 **Threshold:** 10,000 emails
+
 - Below 10K: Vercel processes (2000 workers)
 - Above 10K: Azure processes (unlimited workers)
 

@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js'
 import AuthButton from './AuthButton'
 import UpgradeButton from './UpgradeButton'
 import AppBreadcrumb from './AppBreadcrumb'
+import { CommandMenu } from './CommandMenu'
 
 export default function NavigationWrapper() {
   const [user, setUser] = useState<User | null>(null)
@@ -51,6 +52,7 @@ export default function NavigationWrapper() {
   return (
     <>
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+        <CommandMenu />
         <UpgradeButton currentPlan={userPlan} />
         <AuthButton />
       </div>
