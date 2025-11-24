@@ -1,13 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Loader2, Save, Settings as SettingsIcon, Trash2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Loader2, Save, Settings as SettingsIcon, Trash2, Upload, X, User, Mail, Lock, Camera } from 'lucide-react'
 import AppBreadcrumb from '@/components/AppBreadcrumb'
 import {
   Dialog,
@@ -21,10 +23,28 @@ import {
 export default function SettingsPage() {
   const router = useRouter()
   const supabase = createClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  
+  // Profile state
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [avatarUrl, setAvatarUrl] = useState('')
+  
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordSuccess, setPasswordSuccess] = useState('')
+  
+  // Settings state
   const [settings, setSettings] = useState({
     enable_catch_all_check: true,
     enable_domain_cache: true
@@ -38,7 +58,12 @@ export default function SettingsPage() {
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      router.push('/')
+      router.push('/login')
+    } else {
+      setUser(user)
+      setFullName(user.user_metadata?.full_name || '')
+      setEmail(user.email || '')
+      setAvatarUrl(user.user_metadata?.avatar_url || '')
     }
   }
 
@@ -56,6 +81,155 @@ export default function SettingsPage() {
       console.error('Error fetching settings:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const updateProfile = async () => {
+    setSaving(true)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          full_name: fullName,
+        }
+      })
+
+      if (error) throw error
+      
+      alert('Profile updated successfully!')
+    } catch (error: any) {
+      console.error('Error updating profile:', error)
+      alert(error.message || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file')
+      return
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image must be less than 2MB')
+      return
+    }
+
+    setUploadingAvatar(true)
+    try {
+      // Create a unique file name
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('user-avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('user-avatars')
+        .getPublicUrl(filePath)
+
+      // Update user metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          avatar_url: urlData.publicUrl
+        }
+      })
+
+      if (updateError) throw updateError
+
+      setAvatarUrl(urlData.publicUrl)
+      alert('Profile picture updated successfully!')
+    } catch (error: any) {
+      console.error('Error uploading avatar:', error)
+      alert('Failed to upload image. You may need to configure storage bucket.')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const removeAvatar = async () => {
+    setUploadingAvatar(true)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          avatar_url: null
+        }
+      })
+
+      if (error) throw error
+
+      setAvatarUrl('')
+      alert('Profile picture removed successfully!')
+    } catch (error: any) {
+      console.error('Error removing avatar:', error)
+      alert(error.message || 'Failed to remove profile picture')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
+
+  const updatePassword = async () => {
+    setPasswordError('')
+    setPasswordSuccess('')
+
+    if (newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+
+      if (error) throw error
+
+      setPasswordSuccess('Password updated successfully!')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      
+      setTimeout(() => setPasswordSuccess(''), 5000)
+    } catch (error: any) {
+      console.error('Error updating password:', error)
+      setPasswordError(error.message || 'Failed to update password')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateEmail = async () => {
+    setSaving(true)
+    try {
+      const { error } = await supabase.auth.updateUser({
+        email: email
+      })
+
+      if (error) throw error
+
+      alert('Confirmation email sent! Please check your new email inbox to confirm the change.')
+    } catch (error: any) {
+      console.error('Error updating email:', error)
+      alert(error.message || 'Failed to update email')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -144,6 +318,192 @@ export default function SettingsPage() {
             Manage your account settings and preferences
           </p>
         </div>
+
+        {/* Profile Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Profile Information
+            </CardTitle>
+            <CardDescription>
+              Update your profile picture and personal information
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Avatar Section */}
+            <div className="flex items-center gap-6">
+              <div className="relative group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={avatarUrl} alt={fullName} />
+                  <AvatarFallback className="text-2xl">
+                    {fullName?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {/* Hover overlay with edit icon */}
+                {!uploadingAvatar && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="h-8 w-8 text-white" />
+                  </div>
+                )}
+                
+                {/* Loading spinner */}
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+                    <Loader2 className="h-6 w-6 animate-spin text-white" />
+                  </div>
+                )}
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-[#020202] font-medium">
+                  Profile Picture
+                </p>
+                <p className="text-xs text-[#5C5855]">
+                  Click on avatar to upload<br />
+                  JPG, PNG or GIF. Max 2MB.
+                </p>
+              </div>
+            </div>
+
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Enter your full name"
+              />
+            </div>
+
+            <Button onClick={updateProfile} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save Profile
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Email Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Address
+            </CardTitle>
+            <CardDescription>
+              Update your email address. You'll need to verify the new email.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+              />
+            </div>
+
+            <Button 
+              onClick={updateEmail} 
+              disabled={saving || email === user?.email}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Update Email
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Password Management */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-5 w-5" />
+              Change Password
+            </CardTitle>
+            <CardDescription>
+              Update your password to keep your account secure
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password (min 6 characters)"
+                minLength={6}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                minLength={6}
+              />
+            </div>
+
+            {passwordError && (
+              <p className="text-sm text-red-600">{passwordError}</p>
+            )}
+            {passwordSuccess && (
+              <p className="text-sm text-green-600">{passwordSuccess}</p>
+            )}
+
+            <Button 
+              onClick={updatePassword} 
+              disabled={saving || !newPassword || !confirmPassword}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Update Password
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
