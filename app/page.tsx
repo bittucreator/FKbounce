@@ -215,6 +215,9 @@ export default function Home() {
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-[#5C5855]">
             <p className="font-mono">© 2025 FKBounce</p>
             <div className="flex items-center gap-4">
+              <a href="/compare" className="hover:text-[#020202] transition-colors font-mono">
+                Compare
+              </a>
               <a href="/privacy" className="hover:text-[#020202] transition-colors font-mono">
                 Privacy Policy
               </a>
