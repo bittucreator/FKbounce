@@ -103,10 +103,15 @@ export default function AuthButton() {
   }, [supabase.auth, user, router])
 
   const handleSignIn = async () => {
+    // Use app.fkbounce.com for production, otherwise use current origin
+    const redirectUrl = typeof window !== 'undefined' && window.location.hostname.includes('fkbounce.com')
+      ? 'https://app.fkbounce.com/api/auth/callback'
+      : `${window.location.origin}/api/auth/callback`
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: redirectUrl,
       },
     })
     if (error) {

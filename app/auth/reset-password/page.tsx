@@ -14,18 +14,49 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [sessionChecked, setSessionChecked] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    // Check if we have a valid session from the email link
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        setError('Invalid or expired reset link. Please request a new password reset.')
+    // Handle the auth token from URL hash
+    const handleAuthCallback = async () => {
+      try {
+        // Check for error in URL
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const errorDescription = hashParams.get('error_description')
+        
+        if (errorDescription) {
+          setError(errorDescription)
+          setSessionChecked(true)
+          return
+        }
+
+        // Get the current session (should be set from the email link)
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          setError('Failed to verify session. Please try requesting a new password reset link.')
+          setSessionChecked(true)
+          return
+        }
+
+        if (!session) {
+          setError('Invalid or expired reset link. Please request a new password reset.')
+          setSessionChecked(true)
+          return
+        }
+
+        // Session is valid, user can reset password
+        setSessionChecked(true)
+      } catch (err: any) {
+        console.error('Session check error:', err)
+        setError('An error occurred. Please try again.')
+        setSessionChecked(true)
       }
     }
-    checkSession()
+
+    handleAuthCallback()
   }, [supabase])
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -77,7 +108,12 @@ export default function ResetPasswordPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {success ? (
+          {!sessionChecked ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+              <p className="text-sm text-muted-foreground mt-4">Verifying your link...</p>
+            </div>
+          ) : success ? (
             <div className="text-center space-y-4">
               <div className="text-green-600 text-lg font-semibold">
                 ✓ Password reset successfully!
@@ -125,10 +161,21 @@ export default function ResetPasswordPage() {
               <Button 
                 type="submit" 
                 className="w-full"
-                disabled={loading}
+                disabled={loading || !sessionChecked}
               >
                 {loading ? 'Resetting...' : 'Reset Password'}
               </Button>
+
+              {error && (
+                <Button 
+                  type="button"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => router.push('/')}
+                >
+                  Back to Login
+                </Button>
+              )}
             </form>
           )}
         </CardContent>
