@@ -32,7 +32,7 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: numb
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let accepted = false
 
-    socket.setTimeout(10000) // Increased to 10 seconds
+    socket.setTimeout(5000) // 5 seconds for faster single verification
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)
@@ -50,8 +50,8 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: numb
 
     socket.on('timeout', async () => {
       socket.destroy()
-      // Exponential backoff retry (max 3 attempts)
-      if (attempt < 2) {
+      // Exponential backoff retry (max 2 attempts)
+      if (attempt < 1) {
         const delay = Math.pow(2, attempt) * 1000 // 1s, 2s
         await new Promise(r => setTimeout(r, delay))
         resolve(await checkSMTP(email, mxRecords, attempt + 1))
@@ -62,7 +62,7 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: numb
 
     socket.on('error', async () => {
       // Retry on error
-      if (attempt < 2) {
+      if (attempt < 1) {
         const delay = Math.pow(2, attempt) * 1000
         await new Promise(r => setTimeout(r, delay))
         resolve(await checkSMTP(email, mxRecords, attempt + 1))
@@ -93,7 +93,7 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let responses: string[] = []
 
-    socket.setTimeout(10000) // Increased to 10 seconds
+    socket.setTimeout(3000) // 3 seconds for catch-all check (faster)
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single()
 
-    // Use defaults if no settings found
+    // Use defaults: enable catch-all but with fast timeout (already 5s)
     const enableCatchAll = settings?.enable_catch_all_check ?? true
     const enableCache = settings?.enable_domain_cache ?? true
 
