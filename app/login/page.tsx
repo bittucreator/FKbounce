@@ -27,7 +27,12 @@ export default function Home() {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
-        router.push('/dashboard')
+        // Redirect to app.fkbounce.com in production
+        if (typeof window !== 'undefined' && window.location.hostname.includes('fkbounce.com') && !window.location.hostname.includes('localhost')) {
+          window.location.href = 'https://app.fkbounce.com/dashboard'
+        } else {
+          router.push('/dashboard')
+        }
         return
       }
       
@@ -39,7 +44,12 @@ export default function Home() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session?.user) {
-        router.push('/dashboard')
+        // Redirect to app.fkbounce.com in production
+        if (typeof window !== 'undefined' && window.location.hostname.includes('fkbounce.com') && !window.location.hostname.includes('localhost')) {
+          window.location.href = 'https://app.fkbounce.com/dashboard'
+        } else {
+          router.push('/dashboard')
+        }
       } else {
         setUser(session?.user ?? null)
         setLoading(false)
