@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    const { searchParams, origin } = new URL(request.url)
+    const { searchParams } = new URL(request.url)
     const code = searchParams.get('code')
     const next = searchParams.get('next') ?? '/dashboard'
     const type = searchParams.get('type')
@@ -15,14 +15,23 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         
         if (!error) {
-          // Always redirect to app.fkbounce.com in production, or use origin for local
-          const redirectBase = origin.includes('localhost') ? origin : 'https://app.fkbounce.com'
+          // Don't redirect here - return HTML that redirects client-side
+          const redirectBase = 'https://app.fkbounce.com'
+          const redirectUrl = type === 'recovery' ? `${redirectBase}/auth/reset-password` : `${redirectBase}${next}`
           
-          // If this is a password recovery, redirect to reset password page
-          if (type === 'recovery') {
-            return NextResponse.redirect(`${redirectBase}/auth/reset-password`)
-          }
-          return NextResponse.redirect(`${redirectBase}${next}`)
+          return new Response(`
+            <!DOCTYPE html>
+            <html>
+              <head>
+                <meta http-equiv="refresh" content="0;url=${redirectUrl}">
+              </head>
+              <body>
+                <script>window.location.href = '${redirectUrl}';</script>
+              </body>
+            </html>
+          `, {
+            headers: { 'Content-Type': 'text/html' },
+          })
         }
         
         // Log the error for debugging
@@ -38,10 +47,34 @@ export async function GET(request: Request) {
       }
     }
 
-    // Return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+    // Return HTML redirect for error page
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta http-equiv="refresh" content="0;url=/auth/auth-code-error">
+        </head>
+        <body>
+          <script>window.location.href = '/auth/auth-code-error';</script>
+        </body>
+      </html>
+    `, {
+      headers: { 'Content-Type': 'text/html' },
+    })
   } catch (error) {
     console.error('Unexpected error in auth callback:', error)
-    return NextResponse.redirect(`${request.url.split('?')[0].replace('/api/auth/callback', '')}/auth/auth-code-error`)
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta http-equiv="refresh" content="0;url=/auth/auth-code-error">
+        </head>
+        <body>
+          <script>window.location.href = '/auth/auth-code-error';</script>
+        </body>
+      </html>
+    `, {
+      headers: { 'Content-Type': 'text/html' },
+    })
   }
 }
