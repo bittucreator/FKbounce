@@ -189,7 +189,7 @@ export default function LandingPage() {
                   onClick={() => router.push('/login')}
                   className="h-[24px] px-3 rounded-[4px] text-[12px] font-mono uppercase tracking-wide text-black border-black hover:bg-black hover:text-white transition-colors"
                 >
-                  Get Started
+                  SIGN UP
                 </Button>
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function LandingPage() {
                   onClick={() => router.push('/login')}
                   className="h-[30px] px-3 rounded-[4px] text-[12px] font-mono uppercase tracking-wide"
                 >
-                  Start Free Trial
+                  Start Free
                   <ArrowRight className="ml-2 h-3 w-3" />
                 </RainbowButton>
                 <Button
