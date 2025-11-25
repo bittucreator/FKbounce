@@ -5,12 +5,6 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { Button } from '../../components/ui/button'
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion'
 import AppBreadcrumb from '../../components/AppBreadcrumb'
 
 export default function PrivacyPolicy() {
@@ -65,37 +59,33 @@ export default function PrivacyPolicy() {
       {/* Privacy Policy Content */}
       <section className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8 font-[family-name:var(--font-geist)] text-[#020202]">
+          <h1 className="text-4xl font-bold mb-8 font-mono uppercase text-[#020202]">
             Privacy Policy
           </h1>
           
-          <div className="mb-8 bg-white p-6 rounded-[12px] border border-[#ececec]">
-            <p className="text-[#5C5855] mb-4"><strong>Effective Date:</strong> November 22, 2025</p>
-            <p className="text-[#5C5855] leading-relaxed">
+          <div className="mb-12">
+            <p className="text-[#5C5855] mb-4 font-mono"><strong>EFFECTIVE DATE:</strong> NOVEMBER 22, 2025</p>
+            <p className="text-[#5C5855] leading-relaxed font-mono">
               FKBounce ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our email verification service.
             </p>
           </div>
 
-          <Accordion type="single" collapsible className="space-y-2">
-            <AccordionItem value="item-1" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">1. Information We Collect</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4 space-y-3">
+          <div className="space-y-12">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">1. INFORMATION WE COLLECT</h2>
+              <div className="text-[#5C5855] space-y-3 font-mono">
                 <p className="leading-relaxed">
-                  <strong>Account Information:</strong> When you sign in with Google OAuth, we collect your name, email address, and profile picture from your Google account.
+                  <strong>ACCOUNT INFORMATION:</strong> When you sign in with Google OAuth, we collect your name, email address, and profile picture from your Google account.
                 </p>
                 <p className="leading-relaxed">
-                  <strong>Verification Data:</strong> Email addresses you submit for verification, verification results, and usage statistics. We store this information to provide analytics and maintain your verification history.
+                  <strong>VERIFICATION DATA:</strong> Email addresses you submit for verification, verification results, and usage statistics. We store this information to provide analytics and maintain your verification history.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-2" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">2. How We Use Your Information</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">2. HOW WE USE YOUR INFORMATION</h2>
+              <div className="text-[#5C5855] font-mono">
                 <ul className="list-disc list-inside space-y-2">
                   <li>To authenticate and manage your account</li>
                   <li>To provide email verification services</li>
@@ -104,25 +94,21 @@ export default function PrivacyPolicy() {
                   <li>To improve our service and develop new features</li>
                   <li>To communicate important updates about our service</li>
                 </ul>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-3" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">3. Data Storage and Security</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">3. DATA STORAGE AND SECURITY</h2>
+              <div className="text-[#5C5855] font-mono">
                 <p className="leading-relaxed">
                   Your data is stored securely on Supabase (PostgreSQL) with encryption at rest and in transit. We implement industry-standard security measures including secure authentication tokens, API rate limiting, and regular security audits. Access to your data is restricted to authorized personnel only.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-4" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">4. Data Sharing and Disclosure</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4 space-y-3">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">4. DATA SHARING AND DISCLOSURE</h2>
+              <div className="text-[#5C5855] space-y-3 font-mono">
                 <p className="leading-relaxed">
                   We do not sell, rent, or share your personal information with third parties for their marketing purposes. We may share information only in the following circumstances:
                 </p>
@@ -131,14 +117,12 @@ export default function PrivacyPolicy() {
                   <li>When required by law or to respond to legal process</li>
                   <li>To protect our rights, property, or safety, or that of our users</li>
                 </ul>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-5" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">5. Your Rights and Choices</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4 space-y-3">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">5. YOUR RIGHTS AND CHOICES</h2>
+              <div className="text-[#5C5855] space-y-3 font-mono">
                 <p className="leading-relaxed">You have the right to:</p>
                 <ul className="list-disc list-inside space-y-2">
                   <li>Access your personal data and verification history</li>
@@ -147,64 +131,54 @@ export default function PrivacyPolicy() {
                   <li>Export your verification data</li>
                   <li>Opt out of non-essential communications</li>
                 </ul>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-6" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">6. Data Retention</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">6. DATA RETENTION</h2>
+              <div className="text-[#5C5855] font-mono">
                 <p className="leading-relaxed">
                   We retain your account information and verification history for as long as your account is active. If you delete your account, we will delete your personal data within 30 days, except where retention is required by law.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-7" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">7. Cookies and Tracking</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">7. COOKIES AND TRACKING</h2>
+              <div className="text-[#5C5855] font-mono">
                 <p className="leading-relaxed">
                   We use essential cookies for authentication and session management. We do not use tracking cookies or third-party analytics services.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-8" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">8. Children's Privacy</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">8. CHILDREN'S PRIVACY</h2>
+              <div className="text-[#5C5855] font-mono">
                 <p className="leading-relaxed">
                   Our service is not intended for users under 13 years of age. We do not knowingly collect information from children under 13.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-9" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">9. Changes to This Policy</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">9. CHANGES TO THIS POLICY</h2>
+              <div className="text-[#5C5855] font-mono">
                 <p className="leading-relaxed">
                   We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the "Effective Date" above.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
+              </div>
+            </div>
 
-            <AccordionItem value="item-10" className="bg-white border border-[#ececec] rounded-[12px] px-6">
-              <AccordionTrigger className="text-left hover:no-underline py-4">
-                <span className="font-semibold text-[#020202]">10. Contact Us</span>
-              </AccordionTrigger>
-              <AccordionContent className="text-[#5C5855] pb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-[#020202] mb-4 font-mono uppercase">10. CONTACT US</h2>
+              <div className="text-[#5C5855] font-mono">
                 <p className="leading-relaxed">
-                  If you have questions about this Privacy Policy or our data practices, please contact us at bittucreators@gmail.com.
+                  If you have questions about this Privacy Policy or our data practices, please contact us at support@fkbounce.com.
                 </p>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
