@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { createClient } from '../lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import AuthButton from './AuthButton'
@@ -12,6 +13,7 @@ export default function NavigationWrapper() {
   const [user, setUser] = useState<User | null>(null)
   const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free')
   const [loading, setLoading] = useState(true)
+  const pathname = usePathname()
   const supabase = createClient()
 
   useEffect(() => {
@@ -44,8 +46,8 @@ export default function NavigationWrapper() {
     return () => subscription.unsubscribe()
   }, [supabase.auth])
 
-  // Don't show navigation elements when loading or when user is not signed in
-  if (loading || !user) {
+  // Don't show navigation elements when loading, when user is not signed in, or on landing page
+  if (loading || !user || pathname === '/') {
     return null
   }
 
