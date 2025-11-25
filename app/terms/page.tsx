@@ -27,10 +27,8 @@ export default function TermsOfService() {
   }, [])
 
   const handleSignIn = async () => {
-    // Use app.fkbounce.com for production, otherwise use current origin
-    const redirectUrl = typeof window !== 'undefined' && window.location.hostname.includes('fkbounce.com')
-      ? 'https://app.fkbounce.com/api/auth/callback'
-      : `${window.location.origin}/api/auth/callback`
+    // Always use current origin to avoid cross-domain cookie issues
+    const redirectUrl = `${window.location.origin}/api/auth/callback`
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
