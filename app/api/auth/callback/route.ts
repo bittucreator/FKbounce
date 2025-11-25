@@ -15,11 +15,14 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         
         if (!error) {
+          // Always redirect to app.fkbounce.com in production, or use origin for local
+          const redirectBase = origin.includes('localhost') ? origin : 'https://app.fkbounce.com'
+          
           // If this is a password recovery, redirect to reset password page
           if (type === 'recovery') {
-            return NextResponse.redirect(`${origin}/auth/reset-password`)
+            return NextResponse.redirect(`${redirectBase}/auth/reset-password`)
           }
-          return NextResponse.redirect(`${origin}${next}`)
+          return NextResponse.redirect(`${redirectBase}${next}`)
         }
         
         // Log the error for debugging
