@@ -50,10 +50,8 @@ export default function Home() {
   }, [supabase.auth, router])
 
   const handleSignIn = async () => {
-    // Use app.fkbounce.com for production, otherwise use current origin
-    const redirectUrl = typeof window !== 'undefined' && window.location.hostname.includes('fkbounce.com')
-      ? 'https://app.fkbounce.com/api/auth/callback'
-      : `${window.location.origin}/api/auth/callback`
+    // Always use current origin to avoid cross-domain cookie issues
+    const redirectUrl = `${window.location.origin}/api/auth/callback`
     
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -73,10 +71,8 @@ export default function Home() {
 
     try {
       if (authMode === 'reset') {
-        // Use app.fkbounce.com for production, otherwise use current origin
-        const redirectUrl = typeof window !== 'undefined' && window.location.hostname.includes('fkbounce.com')
-          ? 'https://app.fkbounce.com/auth/reset-password'
-          : `${window.location.origin}/auth/reset-password`
+        // Use current origin to avoid cross-domain issues
+        const redirectUrl = `${window.location.origin}/auth/reset-password`
         
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: redirectUrl,
@@ -85,10 +81,8 @@ export default function Home() {
         setAuthError('Check your email for the password reset link!')
         setEmail('')
       } else if (authMode === 'signup') {
-        // Use app.fkbounce.com for production, otherwise use current origin
-        const redirectUrl = typeof window !== 'undefined' && window.location.hostname.includes('fkbounce.com')
-          ? 'https://app.fkbounce.com/api/auth/callback'
-          : `${window.location.origin}/api/auth/callback`
+        // Use current origin to avoid cross-domain issues
+        const redirectUrl = `${window.location.origin}/api/auth/callback`
         
         const { error } = await supabase.auth.signUp({
           email,
