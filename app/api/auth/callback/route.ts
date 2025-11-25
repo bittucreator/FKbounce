@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get('code')
     const next = searchParams.get('next') ?? '/dashboard'
     const type = searchParams.get('type')
@@ -15,9 +15,8 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         
         if (!error) {
-          // Don't redirect here - return HTML that redirects client-side
-          const redirectBase = 'https://app.fkbounce.com'
-          const redirectUrl = type === 'recovery' ? `${redirectBase}/auth/reset-password` : `${redirectBase}${next}`
+          // Use client-side redirect to avoid Supabase redirect URL validation
+          const redirectUrl = type === 'recovery' ? `${origin}/auth/reset-password` : `${origin}${next}`
           
           return new Response(`
             <!DOCTYPE html>
@@ -52,10 +51,10 @@ export async function GET(request: Request) {
       <!DOCTYPE html>
       <html>
         <head>
-          <meta http-equiv="refresh" content="0;url=/auth/auth-code-error">
+          <meta http-equiv="refresh" content="0;url=${origin}/auth/auth-code-error">
         </head>
         <body>
-          <script>window.location.href = '/auth/auth-code-error';</script>
+          <script>window.location.href = '${origin}/auth/auth-code-error';</script>
         </body>
       </html>
     `, {
@@ -63,14 +62,15 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Unexpected error in auth callback:', error)
+    const origin = new URL(request.url).origin
     return new Response(`
       <!DOCTYPE html>
       <html>
         <head>
-          <meta http-equiv="refresh" content="0;url=/auth/auth-code-error">
+          <meta http-equiv="refresh" content="0;url=${origin}/auth/auth-code-error">
         </head>
         <body>
-          <script>window.location.href = '/auth/auth-code-error';</script>
+          <script>window.location.href = '${origin}/auth/auth-code-error';</script>
         </body>
       </html>
     `, {
