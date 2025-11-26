@@ -1,5 +1,5 @@
 {
-  "name": "smtp-verification-service",
+  "name": "smtp-microservice",
   "version": "1.0.0",
   "description": "SMTP verification microservice for FKBounce",
   "main": "server.js",
@@ -8,8 +8,7 @@
     "dev": "nodemon server.js"
   },
   "engines": {
-    "node": ">=20.x",
-    "npm": ">=10.x"
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "express": "^4.18.2",

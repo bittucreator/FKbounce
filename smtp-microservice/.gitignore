@@ -1,6 +1,9 @@
 node_modules/
 .env
+.DS_Store
 *.log
 npm-debug.log*
-deploy.zip
-.DS_Store
+yarn-debug.log*
+yarn-error.log*
+.vscode/
+.idea/
