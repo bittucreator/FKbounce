@@ -38,6 +38,7 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: numb
 
   return new Promise((resolve) => {
     const socket = net.createConnection(25, mxRecords[0].exchange)
+    let responses: string[] = []
     let accepted = false
 
     socket.setTimeout(10000)
@@ -48,12 +49,28 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: numb
 
     socket.on('data', (data) => {
       const response = data.toString()
+      responses.push(response)
       
-      if (response.includes('220') || response.includes('250')) {
+      // Initial connection greeting (220)
+      if (response.includes('220') && !responses.some(r => r.includes('MAIL FROM'))) {
+        socket.write(`MAIL FROM:<test@verifier.com>\r\n`)
+      } 
+      // MAIL FROM accepted (250), now send RCPT TO
+      else if (response.includes('250') && responses.filter(r => r.includes('250')).length === 1) {
+        socket.write(`RCPT TO:<${email}>\r\n`)
+      } 
+      // RCPT TO accepted (250) - email exists!
+      else if (response.includes('250') && responses.filter(r => r.includes('250')).length >= 2) {
         accepted = true
+        socket.write(`QUIT\r\n`)
+        socket.end()
+      } 
+      // RCPT TO rejected (550, 551, 553) - email doesn't exist
+      else if (response.includes('550') || response.includes('551') || response.includes('553')) {
+        accepted = false
+        socket.write(`QUIT\r\n`)
+        socket.end()
       }
-      
-      socket.end()
     })
 
     socket.on('timeout', async () => {
