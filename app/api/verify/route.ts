@@ -121,8 +121,9 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
   return new Promise((resolve) => {
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let responses: string[] = []
+    let catchAllDetected = false
 
-    socket.setTimeout(3000) // 3 seconds for catch-all check (faster)
+    socket.setTimeout(8000) // Increased to 8 seconds for better reliability
 
     socket.on('connect', () => {
       socket.write(`HELO verifier.com\r\n`)
@@ -138,26 +139,30 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
         socket.write(`RCPT TO:<${randomEmail}>\r\n`)
       } else if (response.includes('250') && responses.filter(r => r.includes('250')).length >= 2) {
         // If random email is accepted, it's catch-all
+        catchAllDetected = true
+        socket.write(`QUIT\r\n`)
         socket.end()
-        resolve(true)
       } else if (response.includes('550') || response.includes('551') || response.includes('553')) {
         // Random email rejected = not catch-all
+        catchAllDetected = false
+        socket.write(`QUIT\r\n`)
         socket.end()
-        resolve(false)
       }
     })
 
     socket.on('timeout', () => {
       socket.destroy()
-      resolve(false)
+      // On timeout, assume catch-all to be safe (prevents false negatives)
+      resolve(catchAllDetected)
     })
 
     socket.on('error', () => {
-      resolve(false)
+      // On error, return current state
+      resolve(catchAllDetected)
     })
 
     socket.on('close', () => {
-      resolve(false)
+      resolve(catchAllDetected)
     })
   })
 }

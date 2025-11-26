@@ -114,6 +114,7 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
   return new Promise((resolve) => {
     const socket = net.createConnection(25, mxRecords[0].exchange)
     let responses: string[] = []
+    let catchAllDetected = false
 
     socket.setTimeout(10000)
 
@@ -130,25 +131,27 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
       } else if (response.includes('250') && responses.filter(r => r.includes('250')).length === 1) {
         socket.write(`RCPT TO:<${randomEmail}>\r\n`)
       } else if (response.includes('250') && responses.filter(r => r.includes('250')).length >= 2) {
+        catchAllDetected = true
+        socket.write(`QUIT\r\n`)
         socket.end()
-        resolve(true)
       } else if (response.includes('550') || response.includes('551') || response.includes('553')) {
+        catchAllDetected = false
+        socket.write(`QUIT\r\n`)
         socket.end()
-        resolve(false)
       }
     })
 
     socket.on('timeout', () => {
       socket.destroy()
-      resolve(false)
+      resolve(catchAllDetected)
     })
 
     socket.on('error', () => {
-      resolve(false)
+      resolve(catchAllDetected)
     })
 
     socket.on('close', () => {
-      resolve(false)
+      resolve(catchAllDetected)
     })
   })
 }
