@@ -233,29 +233,31 @@ export async function POST(request: NextRequest) {
 
           // Verify emails in parallel with progress callback
           console.log('[verify-bulk] Calling verifyEmailsParallel NOW')
-          const results = await verifyEmailsParallel(uniqueEmails, {
-            concurrency,
-            onProgress: async (progress) => {
-              processedCount = progress.processed
-              validCount = progress.valid
-              invalidCount = progress.invalid
+          let results: any[]
+          try {
+            results = await verifyEmailsParallel(uniqueEmails, {
+              concurrency,
+              onProgress: async (progress) => {
+                processedCount = progress.processed
+                validCount = progress.valid
+                invalidCount = progress.invalid
 
-              const elapsedSeconds = (Date.now() - startTime) / 1000
-              const speed = processedCount / elapsedSeconds
-              const progressPercentage = Math.round((processedCount / uniqueEmails.length) * 100)
+                const elapsedSeconds = (Date.now() - startTime) / 1000
+                const speed = processedCount / elapsedSeconds
+                const progressPercentage = Math.round((processedCount / uniqueEmails.length) * 100)
 
-              // Update job progress
-              if (jobId) {
-                await supabase
-                  .from('verification_jobs')
-                  .update({
-                    processed_emails: processedCount,
-                    valid_count: validCount,
-                    invalid_count: invalidCount,
-                    progress_percentage: progressPercentage,
-                  })
-                  .eq('id', jobId)
-              }
+                // Update job progress
+                if (jobId) {
+                  await supabase
+                    .from('verification_jobs')
+                    .update({
+                      processed_emails: processedCount,
+                      valid_count: validCount,
+                      invalid_count: invalidCount,
+                      progress_percentage: progressPercentage,
+                    })
+                    .eq('id', jobId)
+                }
 
               // Send batch progress webhook every 10%
               if (progressPercentage % 10 === 0 && progressPercentage > 0) {
@@ -285,6 +287,11 @@ export async function POST(request: NextRequest) {
               controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData)}\n\n`))
             }
           })
+            console.log('[verify-bulk] verifyEmailsParallel completed, got', results.length, 'results')
+          } catch (verifyError) {
+            console.error('[verify-bulk] verifyEmailsParallel ERROR:', verifyError)
+            throw verifyError
+          }
 
           // Add advanced email intelligence to each result
           const resultsWithIntelligence = await Promise.all(
