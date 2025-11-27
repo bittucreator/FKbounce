@@ -288,6 +288,10 @@ export async function POST(request: NextRequest) {
             }
           })
             console.log('[verify-bulk] verifyEmailsParallel completed, got', results.length, 'results')
+            // Log SMTP values for debugging
+            results.forEach((r: any) => {
+              console.log('[verify-bulk] Result:', r.email, 'SMTP:', r.smtp, 'Catch-All:', r.catch_all)
+            })
           } catch (verifyError) {
             console.error('[verify-bulk] verifyEmailsParallel ERROR:', verifyError)
             throw verifyError
