@@ -23,6 +23,12 @@ interface VerificationResult {
   disposable: boolean
   catch_all: boolean
   message: string
+  // SMTP Provider
+  smtp_provider?: string
+  smtp_provider_type?: 'enterprise' | 'business' | 'personal' | 'unknown'
+  // Confidence level
+  confidence_level?: number
+  confidence_reasons?: string[]
   // Advanced intelligence
   reputation_score?: number
   is_spam_trap?: boolean
@@ -35,19 +41,29 @@ interface VerificationResult {
   insights?: string[]
 }
 
-async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0): Promise<boolean> {
+async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0, mxIndex: number = 0): Promise<{ accepted: boolean; connected: boolean }> {
   if (!mxRecords || mxRecords.length === 0) {
-    return false
+    return { accepted: false, connected: false }
+  }
+
+  // Sort MX records by priority (lower = higher priority)
+  const sortedMx = [...mxRecords].sort((a, b) => a.priority - b.priority)
+  const currentMx = sortedMx[mxIndex]
+  
+  if (!currentMx) {
+    return { accepted: false, connected: false }
   }
 
   return new Promise((resolve) => {
-    const socket = net.createConnection(25, mxRecords[0].exchange)
+    const socket = net.createConnection(25, currentMx.exchange)
     let responses: string[] = []
     let accepted = false
+    let connected = false
 
     socket.setTimeout(5000) // 5 seconds for faster single verification
 
     socket.on('connect', () => {
+      connected = true
       socket.write(`HELO verifier.com\r\n`)
     })
 
@@ -79,29 +95,37 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: numb
 
     socket.on('timeout', async () => {
       socket.destroy()
-      // Exponential backoff retry (max 2 attempts)
-      if (attempt < 1) {
+      // Try next MX server (fallback)
+      if (mxIndex + 1 < sortedMx.length) {
+        resolve(await checkSMTP(email, mxRecords, 0, mxIndex + 1))
+      }
+      // Exponential backoff retry on same server (max 1 retry)
+      else if (attempt < 1) {
         const delay = Math.pow(2, attempt) * 1000 // 1s, 2s
         await new Promise(r => setTimeout(r, delay))
-        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1, mxIndex))
       } else {
-        resolve(false)
+        resolve({ accepted: false, connected })
       }
     })
 
     socket.on('error', async () => {
+      // Try next MX server (fallback)
+      if (mxIndex + 1 < sortedMx.length) {
+        resolve(await checkSMTP(email, mxRecords, 0, mxIndex + 1))
+      }
       // Retry on error
-      if (attempt < 1) {
+      else if (attempt < 1) {
         const delay = Math.pow(2, attempt) * 1000
         await new Promise(r => setTimeout(r, delay))
-        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1, mxIndex))
       } else {
-        resolve(false)
+        resolve({ accepted: false, connected })
       }
     })
 
     socket.on('close', () => {
-      resolve(accepted)
+      resolve({ accepted, connected })
     })
   })
 }
@@ -110,8 +134,16 @@ function isDisposable(domain: string): boolean {
   return disposableDomains.includes(domain.toLowerCase())
 }
 
-async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise<boolean> {
+async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[], mxIndex: number = 0): Promise<boolean> {
   if (!mxRecords || mxRecords.length === 0) {
+    return false
+  }
+
+  // Sort MX records by priority
+  const sortedMx = [...mxRecords].sort((a, b) => a.priority - b.priority)
+  const currentMx = sortedMx[mxIndex]
+  
+  if (!currentMx) {
     return false
   }
 
@@ -119,7 +151,7 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
   const randomEmail = `random${Date.now()}${Math.random().toString(36).substring(7)}@${domain}`
   
   return new Promise((resolve) => {
-    const socket = net.createConnection(25, mxRecords[0].exchange)
+    const socket = net.createConnection(25, currentMx.exchange)
     let responses: string[] = []
     let catchAllDetected = false
 
@@ -150,15 +182,25 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
       }
     })
 
-    socket.on('timeout', () => {
+    socket.on('timeout', async () => {
       socket.destroy()
-      // On timeout, assume catch-all to be safe (prevents false negatives)
-      resolve(catchAllDetected)
+      // Try next MX server (fallback)
+      if (mxIndex + 1 < sortedMx.length) {
+        resolve(await checkCatchAll(domain, mxRecords, mxIndex + 1))
+      } else {
+        // On timeout, assume catch-all to be safe (prevents false negatives)
+        resolve(catchAllDetected)
+      }
     })
 
-    socket.on('error', () => {
-      // On error, return current state
-      resolve(catchAllDetected)
+    socket.on('error', async () => {
+      // Try next MX server (fallback)
+      if (mxIndex + 1 < sortedMx.length) {
+        resolve(await checkCatchAll(domain, mxRecords, mxIndex + 1))
+      } else {
+        // On error, return current state
+        resolve(catchAllDetected)
+      }
     })
 
     socket.on('close', () => {
@@ -167,7 +209,7 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
   })
 }
 
-async function verifyEmail(email: string, enableCatchAll: boolean = true, enableCache: boolean = true): Promise<VerificationResult> {
+async function verifyEmail(email: string, enableCatchAll: boolean = true, enableCache: boolean = true): Promise<{ result: VerificationResult; smtpConnected: boolean }> {
   const result: VerificationResult = {
     email,
     valid: false,
@@ -178,11 +220,12 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
     catch_all: false,
     message: ''
   }
+  let smtpConnected = false
 
   result.syntax = emailValidator.validate(email)
   if (!result.syntax) {
     result.message = 'Invalid email syntax'
-    return result
+    return { result, smtpConnected }
   }
 
   const domain = email.split('@')[1]
@@ -190,7 +233,7 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
   result.disposable = isDisposable(domain)
   if (result.disposable) {
     result.message = 'Disposable email address detected'
-    return result
+    return { result, smtpConnected }
   }
 
   try {
@@ -208,7 +251,7 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
         } else {
           result.message = result.valid ? 'Email is valid' : 'Email verification failed'
         }
-        return result
+        return { result, smtpConnected: true } // Assume connected for cached results
       }
     }
 
@@ -217,10 +260,12 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
     
     if (!result.dns || !mxRecords) {
       result.message = 'No MX records found for domain'
-      return result
+      return { result, smtpConnected }
     }
 
-    result.smtp = await checkSMTP(email, mxRecords)
+    const smtpResult = await checkSMTP(email, mxRecords)
+    result.smtp = smtpResult.accepted
+    smtpConnected = smtpResult.connected
     
     // Only check catch-all if enabled
     if (enableCatchAll) {
@@ -244,7 +289,7 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
     result.message = 'DNS lookup failed'
   }
 
-  return result
+  return { result, smtpConnected }
 }
 
 export async function POST(request: NextRequest) {
@@ -340,7 +385,7 @@ export async function POST(request: NextRequest) {
     const enableCatchAll = settings?.enable_catch_all_check ?? true
     const enableCache = settings?.enable_domain_cache ?? true
 
-    const result = await verifyEmail(email, enableCatchAll, enableCache)
+    const { result, smtpConnected } = await verifyEmail(email, enableCatchAll, enableCache)
     
     // Add advanced email intelligence
     try {
@@ -350,9 +395,14 @@ export async function POST(request: NextRequest) {
         result.dns,
         result.smtp,
         result.disposable,
-        result.catch_all
+        result.catch_all,
+        smtpConnected
       )
       
+      result.smtp_provider = intelligence.smtpProvider
+      result.smtp_provider_type = intelligence.smtpProviderType
+      result.confidence_level = intelligence.confidenceLevel
+      result.confidence_reasons = intelligence.confidenceReasons
       result.reputation_score = intelligence.reputationScore
       result.is_spam_trap = intelligence.isSpamTrap
       result.is_role_based = intelligence.isRoleBased

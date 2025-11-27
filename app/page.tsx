@@ -246,7 +246,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
-                  <span className="font-mono uppercase tracking-wide">1,000 free verifications</span>
+                  <span className="font-mono uppercase tracking-wide">500 free verifications</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
@@ -591,7 +591,7 @@ export default function LandingPage() {
                   Ready to clean your email list?
                 </h2>
                 <p className="text-sm font-mono text-gray-600 mb-8 uppercase tracking-wide">
-                  Start verifying emails today with 500/m emails free . No credit card required.
+                  Start verifying emails today with 500 free emails/month. No credit card required.
                 </p>
                 <RainbowButton
                   onClick={() => router.push('/login')}

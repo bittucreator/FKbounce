@@ -12,6 +12,10 @@ interface EmailIntelligence {
   domainHealthScore: number
   inboxPlacementScore: number
   mxPriority: number[]
+  smtpProvider?: string
+  smtpProviderType?: 'enterprise' | 'business' | 'personal' | 'unknown'
+  confidenceLevel: number
+  confidenceReasons: string[]
   insights: string[]
 }
 
@@ -54,6 +58,218 @@ const DISPOSABLE_DOMAINS = [
   'tempmail.com',
   'throwaway.email'
 ]
+
+// SMTP Provider detection patterns
+const SMTP_PROVIDERS: Record<string, { name: string; type: 'enterprise' | 'business' | 'personal' | 'unknown'; patterns: string[] }> = {
+  'Google Workspace': {
+    name: 'Google Workspace',
+    type: 'enterprise',
+    patterns: ['google.com', 'googlemail.com', 'aspmx.l.google.com', 'alt1.aspmx.l.google.com', 'alt2.aspmx.l.google.com', 'gmail-smtp-in.l.google.com']
+  },
+  'Microsoft 365': {
+    name: 'Microsoft 365',
+    type: 'enterprise',
+    patterns: ['outlook.com', 'protection.outlook.com', 'mail.protection.outlook.com', 'olc.protection.outlook.com']
+  },
+  'Gmail': {
+    name: 'Gmail',
+    type: 'personal',
+    patterns: ['gmail.com']
+  },
+  'Yahoo': {
+    name: 'Yahoo Mail',
+    type: 'personal',
+    patterns: ['yahoo.com', 'yahoodns.net', 'yahoomail.com', 'mta5.am0.yahoodns.net', 'mta6.am0.yahoodns.net', 'mta7.am0.yahoodns.net']
+  },
+  'Outlook/Hotmail': {
+    name: 'Outlook/Hotmail',
+    type: 'personal',
+    patterns: ['hotmail.com', 'live.com', 'msn.com']
+  },
+  'Zoho': {
+    name: 'Zoho Mail',
+    type: 'business',
+    patterns: ['zoho.com', 'zohomail.com', 'mx.zoho.com', 'mx2.zoho.com', 'mx3.zoho.com']
+  },
+  'Proofpoint': {
+    name: 'Proofpoint',
+    type: 'enterprise',
+    patterns: ['pphosted.com', 'proofpoint.com', 'ppe-hosted.com']
+  },
+  'Mimecast': {
+    name: 'Mimecast',
+    type: 'enterprise',
+    patterns: ['mimecast.com', 'mimecast.co.za', 'mailcontrol.com']
+  },
+  'Barracuda': {
+    name: 'Barracuda',
+    type: 'enterprise',
+    patterns: ['barracudanetworks.com', 'barracuda.com', 'cuda-inc.com']
+  },
+  'Amazon SES': {
+    name: 'Amazon SES',
+    type: 'business',
+    patterns: ['amazonses.com', 'amazonaws.com', 'inbound-smtp.us-east-1.amazonaws.com']
+  },
+  'SendGrid': {
+    name: 'SendGrid',
+    type: 'business',
+    patterns: ['sendgrid.net', 'sendgrid.com']
+  },
+  'Mailgun': {
+    name: 'Mailgun',
+    type: 'business',
+    patterns: ['mailgun.org', 'mailgun.com']
+  },
+  'iCloud': {
+    name: 'iCloud Mail',
+    type: 'personal',
+    patterns: ['icloud.com', 'me.com', 'mac.com', 'apple.com']
+  },
+  'AOL': {
+    name: 'AOL Mail',
+    type: 'personal',
+    patterns: ['aol.com', 'aim.com', 'netscape.net']
+  },
+  'ProtonMail': {
+    name: 'ProtonMail',
+    type: 'personal',
+    patterns: ['protonmail.ch', 'protonmail.com', 'pm.me', 'mail.protonmail.ch']
+  },
+  'FastMail': {
+    name: 'FastMail',
+    type: 'business',
+    patterns: ['fastmail.com', 'messagingengine.com', 'fastmail.fm']
+  },
+  'Rackspace': {
+    name: 'Rackspace Email',
+    type: 'business',
+    patterns: ['emailsrvr.com', 'rackspace.com']
+  },
+  'GoDaddy': {
+    name: 'GoDaddy Workspace',
+    type: 'business',
+    patterns: ['secureserver.net', 'godaddy.com', 'mailstore1.secureserver.net']
+  },
+  'OVH': {
+    name: 'OVH Mail',
+    type: 'business',
+    patterns: ['ovh.net', 'ovh.com', 'mx0.ovh.net', 'mx1.ovh.net']
+  },
+  'Yandex': {
+    name: 'Yandex Mail',
+    type: 'personal',
+    patterns: ['yandex.ru', 'yandex.com', 'mx.yandex.net', 'mx.yandex.ru']
+  }
+}
+
+/**
+ * Detect SMTP provider from MX records
+ */
+export function detectSMTPProvider(mxRecords: dns.MxRecord[]): { name: string; type: 'enterprise' | 'business' | 'personal' | 'unknown' } | null {
+  if (!mxRecords || mxRecords.length === 0) {
+    return null
+  }
+  
+  for (const mx of mxRecords) {
+    const exchange = mx.exchange.toLowerCase()
+    
+    for (const [providerName, provider] of Object.entries(SMTP_PROVIDERS)) {
+      if (provider.patterns.some(pattern => exchange.includes(pattern))) {
+        return { name: provider.name, type: provider.type }
+      }
+    }
+  }
+  
+  // Check for common patterns that indicate self-hosted
+  const primaryMx = mxRecords[0].exchange.toLowerCase()
+  if (primaryMx.startsWith('mail.') || primaryMx.startsWith('mx.') || primaryMx.startsWith('smtp.')) {
+    return { name: 'Self-Hosted', type: 'unknown' }
+  }
+  
+  return null
+}
+
+/**
+ * Calculate verification confidence level (0-100)
+ * Higher = more confident in the result
+ */
+export function calculateConfidenceLevel(
+  syntax: boolean,
+  dns: boolean,
+  smtp: boolean,
+  smtpConnected: boolean,
+  catchAll: boolean,
+  mxRecords: dns.MxRecord[],
+  smtpProvider: { name: string; type: string } | null
+): { confidence: number; reasons: string[] } {
+  let confidence = 0
+  const reasons: string[] = []
+  
+  // Syntax check is very reliable (+20)
+  if (syntax) {
+    confidence += 20
+    reasons.push('Valid email syntax')
+  } else {
+    reasons.push('Invalid email syntax detected')
+    return { confidence: 0, reasons }
+  }
+  
+  // DNS/MX lookup is reliable (+25)
+  if (dns && mxRecords && mxRecords.length > 0) {
+    confidence += 25
+    reasons.push(`MX records found (${mxRecords.length} server${mxRecords.length > 1 ? 's' : ''})`)
+  } else {
+    reasons.push('No MX records found')
+    return { confidence, reasons }
+  }
+  
+  // SMTP connection established (+15)
+  if (smtpConnected) {
+    confidence += 15
+    reasons.push('SMTP connection successful')
+  } else {
+    reasons.push('Could not establish SMTP connection')
+  }
+  
+  // SMTP validation (+25 if validated, -10 if rejected)
+  if (smtp) {
+    confidence += 25
+    reasons.push('SMTP verification passed')
+  } else if (smtpConnected) {
+    // Connected but email rejected
+    confidence += 10 // Still somewhat confident it's invalid
+    reasons.push('SMTP server rejected the address')
+  }
+  
+  // Known provider increases confidence (+10)
+  if (smtpProvider) {
+    if (smtpProvider.type === 'enterprise') {
+      confidence += 10
+      reasons.push(`Enterprise provider: ${smtpProvider.name}`)
+    } else if (smtpProvider.type === 'business') {
+      confidence += 8
+      reasons.push(`Business provider: ${smtpProvider.name}`)
+    } else if (smtpProvider.type === 'personal') {
+      confidence += 5
+      reasons.push(`Personal provider: ${smtpProvider.name}`)
+    }
+  }
+  
+  // Catch-all domains reduce confidence (-15)
+  if (catchAll) {
+    confidence -= 15
+    reasons.push('Catch-all domain (accepts any address)')
+  } else if (smtpConnected) {
+    confidence += 5
+    reasons.push('Not a catch-all domain')
+  }
+  
+  return {
+    confidence: Math.max(0, Math.min(100, confidence)),
+    reasons
+  }
+}
 
 /**
  * Calculate email reputation score (0-100)
@@ -307,7 +523,8 @@ export async function analyzeEmailIntelligence(
   dns: boolean,
   smtp: boolean,
   disposable: boolean,
-  catchAll: boolean
+  catchAll: boolean,
+  smtpConnected: boolean = smtp // Assume connected if smtp passed
 ): Promise<EmailIntelligence> {
   const domain = email.split('@')[1]
   const insights: string[] = []
@@ -317,11 +534,17 @@ export async function analyzeEmailIntelligence(
   insights.push(...domainInsights)
   
   // Get MX records for reputation calculation
-  let mxRecords: any[] = []
+  let mxRecords: dns.MxRecord[] = []
   try {
     mxRecords = await resolveMx(domain)
   } catch (error) {
     // MX resolution failed, already handled in analyzeDomainHealth
+  }
+  
+  // Detect SMTP provider
+  const smtpProviderInfo = detectSMTPProvider(mxRecords)
+  if (smtpProviderInfo) {
+    insights.push(`📧 Email provider: ${smtpProviderInfo.name}`)
   }
   
   // Calculate reputation score
@@ -334,6 +557,17 @@ export async function analyzeEmailIntelligence(
     disposable,
     catchAll,
     mxRecords
+  )
+  
+  // Calculate confidence level
+  const { confidence: confidenceLevel, reasons: confidenceReasons } = calculateConfidenceLevel(
+    syntax,
+    dns,
+    smtp,
+    smtpConnected,
+    catchAll,
+    mxRecords,
+    smtpProviderInfo
   )
   
   // Detect spam trap
@@ -373,6 +607,15 @@ export async function analyzeEmailIntelligence(
     insights.push('❌ Poor reputation - not recommended for outreach')
   }
   
+  // Add confidence insight
+  if (confidenceLevel >= 80) {
+    insights.push(`🎯 High confidence: ${confidenceLevel}%`)
+  } else if (confidenceLevel >= 60) {
+    insights.push(`📊 Moderate confidence: ${confidenceLevel}%`)
+  } else {
+    insights.push(`⚠️ Low confidence: ${confidenceLevel}%`)
+  }
+  
   return {
     reputationScore,
     isSpamTrap,
@@ -382,6 +625,10 @@ export async function analyzeEmailIntelligence(
     domainHealthScore,
     inboxPlacementScore,
     mxPriority,
+    smtpProvider: smtpProviderInfo?.name,
+    smtpProviderType: smtpProviderInfo?.type,
+    confidenceLevel,
+    confidenceReasons,
     insights
   }
 }

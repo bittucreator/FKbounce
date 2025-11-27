@@ -31,13 +31,21 @@ interface ParallelVerifierOptions {
   }) => void
 }
 
-async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0): Promise<boolean> {
+async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0, mxIndex: number = 0): Promise<boolean> {
   if (!mxRecords || mxRecords.length === 0) {
     return false
   }
 
+  // Sort MX records by priority (lower = higher priority)
+  const sortedMx = [...mxRecords].sort((a, b) => a.priority - b.priority)
+  const currentMx = sortedMx[mxIndex]
+  
+  if (!currentMx) {
+    return false
+  }
+
   return new Promise((resolve) => {
-    const socket = net.createConnection(25, mxRecords[0].exchange)
+    const socket = net.createConnection(25, currentMx.exchange)
     let responses: string[] = []
     let accepted = false
 
@@ -75,20 +83,30 @@ async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: numb
 
     socket.on('timeout', async () => {
       socket.destroy()
-      if (attempt < 2) {
+      // Try next MX server (fallback)
+      if (mxIndex + 1 < sortedMx.length) {
+        resolve(await checkSMTP(email, mxRecords, 0, mxIndex + 1))
+      }
+      // Retry on same server
+      else if (attempt < 2) {
         const delay = Math.pow(2, attempt) * 1000
         await new Promise(r => setTimeout(r, delay))
-        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1, mxIndex))
       } else {
         resolve(false)
       }
     })
 
     socket.on('error', async () => {
-      if (attempt < 2) {
+      // Try next MX server (fallback)
+      if (mxIndex + 1 < sortedMx.length) {
+        resolve(await checkSMTP(email, mxRecords, 0, mxIndex + 1))
+      }
+      // Retry on same server
+      else if (attempt < 2) {
         const delay = Math.pow(2, attempt) * 1000
         await new Promise(r => setTimeout(r, delay))
-        resolve(await checkSMTP(email, mxRecords, attempt + 1))
+        resolve(await checkSMTP(email, mxRecords, attempt + 1, mxIndex))
       } else {
         resolve(false)
       }
@@ -104,15 +122,23 @@ function isDisposable(domain: string): boolean {
   return disposableDomains.includes(domain.toLowerCase())
 }
 
-async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise<boolean> {
+async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[], mxIndex: number = 0): Promise<boolean> {
   if (!mxRecords || mxRecords.length === 0) {
+    return false
+  }
+
+  // Sort MX records by priority
+  const sortedMx = [...mxRecords].sort((a, b) => a.priority - b.priority)
+  const currentMx = sortedMx[mxIndex]
+  
+  if (!currentMx) {
     return false
   }
 
   const randomEmail = `random${Date.now()}${Math.random().toString(36).substring(7)}@${domain}`
   
   return new Promise((resolve) => {
-    const socket = net.createConnection(25, mxRecords[0].exchange)
+    const socket = net.createConnection(25, currentMx.exchange)
     let responses: string[] = []
     let catchAllDetected = false
 
@@ -141,13 +167,23 @@ async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[]): Promise
       }
     })
 
-    socket.on('timeout', () => {
+    socket.on('timeout', async () => {
       socket.destroy()
-      resolve(catchAllDetected)
+      // Try next MX server (fallback)
+      if (mxIndex + 1 < sortedMx.length) {
+        resolve(await checkCatchAll(domain, mxRecords, mxIndex + 1))
+      } else {
+        resolve(catchAllDetected)
+      }
     })
 
-    socket.on('error', () => {
-      resolve(catchAllDetected)
+    socket.on('error', async () => {
+      // Try next MX server (fallback)
+      if (mxIndex + 1 < sortedMx.length) {
+        resolve(await checkCatchAll(domain, mxRecords, mxIndex + 1))
+      } else {
+        resolve(catchAllDetected)
+      }
     })
 
     socket.on('close', () => {
