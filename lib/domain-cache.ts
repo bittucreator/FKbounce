@@ -5,6 +5,7 @@ interface DomainCacheEntry {
   dns: boolean
   smtp: boolean
   catch_all: boolean
+  smtp_provider?: string
   mxRecords: any[]
   timestamp: number
 }
@@ -44,12 +45,14 @@ export function setDomainCache(
   dns: boolean,
   smtp: boolean,
   catch_all: boolean,
-  mxRecords: any[]
+  mxRecords: any[],
+  smtp_provider?: string
 ): void {
   domainCache[domain] = {
     dns,
     smtp,
     catch_all,
+    smtp_provider,
     mxRecords,
     timestamp: Date.now()
   }

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dns from 'dns'
 import { promisify } from 'util'
-import net from 'net'
 import emailValidator from 'email-validator'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
@@ -9,6 +8,7 @@ import { dnsCache } from '@/lib/dns-cache'
 import { getDomainCache, setDomainCache } from '@/lib/domain-cache'
 import { analyzeEmailIntelligence } from '@/lib/email-intelligence'
 import { sendVerificationWebhook, sendQuotaWarningWebhook, sendQuotaExceededWebhook } from '@/lib/webhooks/delivery'
+import { verifySMTP } from '@/lib/smtp-service'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -41,172 +41,8 @@ interface VerificationResult {
   insights?: string[]
 }
 
-async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0, mxIndex: number = 0): Promise<{ accepted: boolean; connected: boolean }> {
-  if (!mxRecords || mxRecords.length === 0) {
-    return { accepted: false, connected: false }
-  }
-
-  // Sort MX records by priority (lower = higher priority)
-  const sortedMx = [...mxRecords].sort((a, b) => a.priority - b.priority)
-  const currentMx = sortedMx[mxIndex]
-  
-  if (!currentMx) {
-    return { accepted: false, connected: false }
-  }
-
-  return new Promise((resolve) => {
-    const socket = net.createConnection(25, currentMx.exchange)
-    let responses: string[] = []
-    let accepted = false
-    let connected = false
-
-    socket.setTimeout(5000) // 5 seconds for faster single verification
-
-    socket.on('connect', () => {
-      connected = true
-      socket.write(`HELO verifier.com\r\n`)
-    })
-
-    socket.on('data', (data) => {
-      const response = data.toString()
-      responses.push(response)
-      
-      // Initial connection greeting (220)
-      if (response.includes('220') && !responses.some(r => r.includes('MAIL FROM'))) {
-        socket.write(`MAIL FROM:<test@verifier.com>\r\n`)
-      } 
-      // MAIL FROM accepted (250), now send RCPT TO
-      else if (response.includes('250') && responses.filter(r => r.includes('250')).length === 1) {
-        socket.write(`RCPT TO:<${email}>\r\n`)
-      } 
-      // RCPT TO accepted (250) - email exists!
-      else if (response.includes('250') && responses.filter(r => r.includes('250')).length >= 2) {
-        accepted = true
-        socket.write(`QUIT\r\n`)
-        socket.end()
-      } 
-      // RCPT TO rejected (550, 551, 553) - email doesn't exist
-      else if (response.includes('550') || response.includes('551') || response.includes('553')) {
-        accepted = false
-        socket.write(`QUIT\r\n`)
-        socket.end()
-      }
-    })
-
-    socket.on('timeout', async () => {
-      socket.destroy()
-      // Try next MX server (fallback)
-      if (mxIndex + 1 < sortedMx.length) {
-        resolve(await checkSMTP(email, mxRecords, 0, mxIndex + 1))
-      }
-      // Exponential backoff retry on same server (max 1 retry)
-      else if (attempt < 1) {
-        const delay = Math.pow(2, attempt) * 1000 // 1s, 2s
-        await new Promise(r => setTimeout(r, delay))
-        resolve(await checkSMTP(email, mxRecords, attempt + 1, mxIndex))
-      } else {
-        resolve({ accepted: false, connected })
-      }
-    })
-
-    socket.on('error', async () => {
-      // Try next MX server (fallback)
-      if (mxIndex + 1 < sortedMx.length) {
-        resolve(await checkSMTP(email, mxRecords, 0, mxIndex + 1))
-      }
-      // Retry on error
-      else if (attempt < 1) {
-        const delay = Math.pow(2, attempt) * 1000
-        await new Promise(r => setTimeout(r, delay))
-        resolve(await checkSMTP(email, mxRecords, attempt + 1, mxIndex))
-      } else {
-        resolve({ accepted: false, connected })
-      }
-    })
-
-    socket.on('close', () => {
-      resolve({ accepted, connected })
-    })
-  })
-}
-
 function isDisposable(domain: string): boolean {
   return disposableDomains.includes(domain.toLowerCase())
-}
-
-async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[], mxIndex: number = 0): Promise<boolean> {
-  if (!mxRecords || mxRecords.length === 0) {
-    return false
-  }
-
-  // Sort MX records by priority
-  const sortedMx = [...mxRecords].sort((a, b) => a.priority - b.priority)
-  const currentMx = sortedMx[mxIndex]
-  
-  if (!currentMx) {
-    return false
-  }
-
-  // Generate random email to test
-  const randomEmail = `random${Date.now()}${Math.random().toString(36).substring(7)}@${domain}`
-  
-  return new Promise((resolve) => {
-    const socket = net.createConnection(25, currentMx.exchange)
-    let responses: string[] = []
-    let catchAllDetected = false
-
-    socket.setTimeout(8000) // Increased to 8 seconds for better reliability
-
-    socket.on('connect', () => {
-      socket.write(`HELO verifier.com\r\n`)
-    })
-
-    socket.on('data', (data) => {
-      const response = data.toString()
-      responses.push(response)
-      
-      if (response.includes('220') && !responses.some(r => r.includes('MAIL FROM'))) {
-        socket.write(`MAIL FROM:<test@verifier.com>\r\n`)
-      } else if (response.includes('250') && responses.filter(r => r.includes('250')).length === 1) {
-        socket.write(`RCPT TO:<${randomEmail}>\r\n`)
-      } else if (response.includes('250') && responses.filter(r => r.includes('250')).length >= 2) {
-        // If random email is accepted, it's catch-all
-        catchAllDetected = true
-        socket.write(`QUIT\r\n`)
-        socket.end()
-      } else if (response.includes('550') || response.includes('551') || response.includes('553')) {
-        // Random email rejected = not catch-all
-        catchAllDetected = false
-        socket.write(`QUIT\r\n`)
-        socket.end()
-      }
-    })
-
-    socket.on('timeout', async () => {
-      socket.destroy()
-      // Try next MX server (fallback)
-      if (mxIndex + 1 < sortedMx.length) {
-        resolve(await checkCatchAll(domain, mxRecords, mxIndex + 1))
-      } else {
-        // On timeout, assume catch-all to be safe (prevents false negatives)
-        resolve(catchAllDetected)
-      }
-    })
-
-    socket.on('error', async () => {
-      // Try next MX server (fallback)
-      if (mxIndex + 1 < sortedMx.length) {
-        resolve(await checkCatchAll(domain, mxRecords, mxIndex + 1))
-      } else {
-        // On error, return current state
-        resolve(catchAllDetected)
-      }
-    })
-
-    socket.on('close', () => {
-      resolve(catchAllDetected)
-    })
-  })
 }
 
 async function verifyEmail(email: string, enableCatchAll: boolean = true, enableCache: boolean = true): Promise<{ result: VerificationResult; smtpConnected: boolean }> {
@@ -244,6 +80,7 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
         result.dns = cached.dns
         result.smtp = cached.smtp
         result.catch_all = cached.catch_all
+        result.smtp_provider = cached.smtp_provider
         result.valid = result.syntax && result.dns
         
         if (result.catch_all && enableCatchAll) {
@@ -251,10 +88,11 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
         } else {
           result.message = result.valid ? 'Email is valid' : 'Email verification failed'
         }
-        return { result, smtpConnected: true } // Assume connected for cached results
+        return { result, smtpConnected: true }
       }
     }
 
+    // Check DNS/MX records
     const mxRecords = await dnsCache.getMxRecords(domain)
     result.dns = !!(mxRecords && mxRecords.length > 0)
     
@@ -263,18 +101,28 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
       return { result, smtpConnected }
     }
 
-    const smtpResult = await checkSMTP(email, mxRecords)
-    result.smtp = smtpResult.accepted
-    smtpConnected = smtpResult.connected
-    
-    // Only check catch-all if enabled
-    if (enableCatchAll) {
-      result.catch_all = await checkCatchAll(domain, mxRecords)
+    // Use Azure SMTP microservice for SMTP and catch-all checks
+    const smtpServiceUrl = process.env.SMTP_SERVICE_URL
+    const smtpServiceKey = process.env.SMTP_SERVICE_API_KEY
+
+    if (smtpServiceUrl && smtpServiceKey) {
+      // Use the Azure microservice
+      const smtpResult = await verifySMTP(email)
+      result.smtp = smtpResult.smtp
+      result.catch_all = enableCatchAll ? smtpResult.catch_all : false
+      result.smtp_provider = smtpResult.smtp_provider || undefined
+      smtpConnected = smtpResult.connected
+    } else {
+      // Fallback: Skip SMTP check if microservice not configured
+      result.smtp = false
+      result.catch_all = false
+      smtpConnected = false
+      console.warn('SMTP microservice not configured, skipping SMTP verification')
     }
     
     // Cache the domain results
     if (enableCache) {
-      setDomainCache(domain, result.dns, result.smtp, result.catch_all, mxRecords)
+      setDomainCache(domain, result.dns, result.smtp, result.catch_all, mxRecords, result.smtp_provider)
     }
     
     result.valid = result.syntax && result.dns
@@ -286,6 +134,7 @@ async function verifyEmail(email: string, enableCatchAll: boolean = true, enable
     }
     
   } catch (error) {
+    console.error('Verification error:', error)
     result.message = 'DNS lookup failed'
   }
 
