@@ -61,9 +61,15 @@ function isDisposable(domain: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('[verify-bulk] POST called')
+  console.log('[verify-bulk] SMTP_SERVICE_URL:', process.env.SMTP_SERVICE_URL || 'NOT SET')
+  console.log('[verify-bulk] SMTP_SERVICE_API_KEY:', process.env.SMTP_SERVICE_API_KEY ? 'SET' : 'NOT SET')
+  
   try {
     const body = await request.json()
     const { emails, stream } = body
+    
+    console.log('[verify-bulk] Emails count:', emails?.length, 'Stream:', stream)
 
     if (!emails || !Array.isArray(emails)) {
       return NextResponse.json(
