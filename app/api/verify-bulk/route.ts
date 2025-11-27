@@ -7,7 +7,8 @@ import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
 import { dnsCache } from '@/lib/dns-cache'
 import { deliverWebhook, WebhookPayload } from '@/lib/webhook-delivery'
 import { sendBatchProgressWebhook, sendBatchWebhook, sendQuotaWarningWebhook, sendQuotaExceededWebhook } from '@/lib/webhooks/delivery'
-import { verifyEmailsParallel, estimateVerificationTime } from '@/lib/parallel-verifier'
+import { estimateVerificationTime } from '@/lib/parallel-verifier'
+import { verifySMTPBulk } from '@/lib/smtp-service'
 import { analyzeEmailIntelligence } from '@/lib/email-intelligence'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
@@ -220,80 +221,93 @@ export async function POST(request: NextRequest) {
           // Estimate time
           const estimate = estimateVerificationTime(uniqueEmails.length, concurrency)
           
-          console.log('[verify-bulk] About to call verifyEmailsParallel with', uniqueEmails.length, 'emails')
-          
           // Send initial estimate
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: 'estimate',
             totalEmails: uniqueEmails.length,
             concurrency,
             estimatedSeconds: estimate.avgSeconds,
-            message: `Processing ${uniqueEmails.length.toLocaleString()} emails with ${concurrency} concurrent workers (estimated ${Math.ceil(estimate.avgSeconds / 60)} minutes)`
+            message: `Processing ${uniqueEmails.length.toLocaleString()} emails (estimated ${Math.ceil(estimate.avgSeconds / 60)} minutes)`
           })}\n\n`))
 
-          // Verify emails in parallel with progress callback
-          console.log('[verify-bulk] Calling verifyEmailsParallel NOW')
-          let results: any[]
+          // Direct Azure SMTP verification (same as single verification)
+          let results: any[] = []
           try {
-            results = await verifyEmailsParallel(uniqueEmails, {
-              concurrency,
-              onProgress: async (progress) => {
-                processedCount = progress.processed
-                validCount = progress.valid
-                invalidCount = progress.invalid
-
-                const elapsedSeconds = (Date.now() - startTime) / 1000
-                const speed = processedCount / elapsedSeconds
-                const progressPercentage = Math.round((processedCount / uniqueEmails.length) * 100)
-
-                // Update job progress
-                if (jobId) {
-                  await supabase
-                    .from('verification_jobs')
-                    .update({
-                      processed_emails: processedCount,
-                      valid_count: validCount,
-                      invalid_count: invalidCount,
-                      progress_percentage: progressPercentage,
-                    })
-                    .eq('id', jobId)
-                }
-
-              // Send batch progress webhook every 10%
-              if (progressPercentage % 10 === 0 && progressPercentage > 0) {
-                const { data: webhooks } = await supabase
-                  .from('webhook_configs')
-                  .select('*')
-                  .eq('user_id', user.id)
-                  .eq('is_active', true)
-
-                if (webhooks && webhooks.length > 0 && jobId) {
-                  sendBatchProgressWebhook(webhooks, jobId, processedCount, uniqueEmails.length).catch(console.error)
-                }
+            // Pre-filter for syntax and disposable
+            const preFiltered: { email: string; result: any | null }[] = []
+            
+            for (const email of uniqueEmails) {
+              const syntaxValid = emailValidator.validate(email)
+              if (!syntaxValid) {
+                preFiltered.push({ 
+                  email, 
+                  result: { email, valid: false, syntax: false, dns: false, smtp: false, disposable: false, catch_all: false, message: 'Invalid email syntax' }
+                })
+                continue
               }
-
-              const progressData = {
-                type: 'progress',
-                processed: processedCount,
-                total: uniqueEmails.length,
-                percentage: progressPercentage,
-                speed: Math.round(speed * 10) / 10,
-                currentEmail: progress.currentEmail,
-                valid: validCount,
-                invalid: invalidCount,
-                jobId,
+              
+              const domain = email.split('@')[1]
+              if (isDisposable(domain)) {
+                preFiltered.push({ 
+                  email, 
+                  result: { email, valid: false, syntax: true, dns: false, smtp: false, disposable: true, catch_all: false, message: 'Disposable email address' }
+                })
+                continue
               }
-
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify(progressData)}\n\n`))
+              
+              preFiltered.push({ email, result: null })
             }
-          })
-            console.log('[verify-bulk] verifyEmailsParallel completed, got', results.length, 'results')
-            // Log SMTP values for debugging
-            results.forEach((r: any) => {
-              console.log('[verify-bulk] Result:', r.email, 'SMTP:', r.smtp, 'Catch-All:', r.catch_all)
-            })
+            
+            // Get emails that need SMTP verification
+            const emailsForSMTP = preFiltered.filter(e => e.result === null).map(e => e.email)
+            
+            // Call Azure SMTP service directly
+            if (emailsForSMTP.length > 0) {
+              const smtpResults = await verifySMTPBulk(emailsForSMTP)
+              
+              // Map SMTP results
+              for (const smtpResult of smtpResults.results) {
+                const domain = smtpResult.email.split('@')[1]
+                let hasDns = false
+                try {
+                  const mx = await dnsCache.getMxRecords(domain)
+                  hasDns = !!(mx && mx.length > 0)
+                } catch (e) {}
+                
+                results.push({
+                  email: smtpResult.email,
+                  valid: hasDns,
+                  syntax: true,
+                  dns: hasDns,
+                  smtp: smtpResult.smtp,
+                  disposable: false,
+                  catch_all: smtpResult.catch_all,
+                  smtp_provider: smtpResult.smtp_provider,
+                  message: smtpResult.catch_all 
+                    ? 'Email domain accepts all addresses (catch-all)'
+                    : (smtpResult.smtp ? 'Email is valid' : 'Email verification failed')
+                })
+              }
+            }
+            
+            // Add pre-filtered results
+            for (const item of preFiltered) {
+              if (item.result !== null) {
+                results.push(item.result)
+              }
+            }
+            
+            // Sort to match original order
+            const emailOrder = new Map(uniqueEmails.map((e, i) => [e.toLowerCase(), i]))
+            results.sort((a, b) => (emailOrder.get(a.email.toLowerCase()) ?? 0) - (emailOrder.get(b.email.toLowerCase()) ?? 0))
+            
+            // Update counts
+            processedCount = results.length
+            validCount = results.filter(r => r.valid).length
+            invalidCount = results.filter(r => !r.valid).length
+            
           } catch (verifyError) {
-            console.error('[verify-bulk] verifyEmailsParallel ERROR:', verifyError)
+            console.error('[verify-bulk] SMTP verification ERROR:', verifyError)
             throw verifyError
           }
 
@@ -420,18 +434,75 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Original non-streaming behavior with parallel processing
-    let concurrency = userPlan?.plan === 'pro' ? 2000 : 200
-    if (body.concurrency && typeof body.concurrency === 'number') {
-      const maxAllowed = userPlan?.plan === 'pro' ? 3000 : 500
-      const minAllowed = 50
-      concurrency = Math.max(minAllowed, Math.min(body.concurrency, maxAllowed))
+    // Original non-streaming behavior - call Azure directly
+    let results: any[] = []
+    
+    // Pre-filter for syntax and disposable
+    const preFiltered: { email: string; result: any | null }[] = []
+    
+    for (const email of uniqueEmails) {
+      const syntaxValid = emailValidator.validate(email)
+      if (!syntaxValid) {
+        preFiltered.push({ 
+          email, 
+          result: { email, valid: false, syntax: false, dns: false, smtp: false, disposable: false, catch_all: false, message: 'Invalid email syntax' }
+        })
+        continue
+      }
+      
+      const domain = email.split('@')[1]
+      if (isDisposable(domain)) {
+        preFiltered.push({ 
+          email, 
+          result: { email, valid: false, syntax: true, dns: false, smtp: false, disposable: true, catch_all: false, message: 'Disposable email address' }
+        })
+        continue
+      }
+      
+      preFiltered.push({ email, result: null })
     }
-    const results = await verifyEmailsParallel(uniqueEmails, {
-      concurrency,
-      enableCache: true,
-      enableCatchAll: true,
-    })
+    
+    // Get emails that need SMTP verification
+    const emailsForSMTP = preFiltered.filter(e => e.result === null).map(e => e.email)
+    
+    // Call Azure SMTP service directly
+    if (emailsForSMTP.length > 0) {
+      const smtpResults = await verifySMTPBulk(emailsForSMTP)
+      
+      for (const smtpResult of smtpResults.results) {
+        const domain = smtpResult.email.split('@')[1]
+        let hasDns = false
+        try {
+          const mx = await dnsCache.getMxRecords(domain)
+          hasDns = !!(mx && mx.length > 0)
+        } catch (e) {}
+        
+        results.push({
+          email: smtpResult.email,
+          valid: hasDns,
+          syntax: true,
+          dns: hasDns,
+          smtp: smtpResult.smtp,
+          disposable: false,
+          catch_all: smtpResult.catch_all,
+          smtp_provider: smtpResult.smtp_provider,
+          message: smtpResult.catch_all 
+            ? 'Email domain accepts all addresses (catch-all)'
+            : (smtpResult.smtp ? 'Email is valid' : 'Email verification failed')
+        })
+      }
+    }
+    
+    // Add pre-filtered results
+    for (const item of preFiltered) {
+      if (item.result !== null) {
+        results.push(item.result)
+      }
+    }
+    
+    // Sort to match original order
+    const emailOrder = new Map(uniqueEmails.map((e, i) => [e.toLowerCase(), i]))
+    results.sort((a, b) => (emailOrder.get(a.email.toLowerCase()) ?? 0) - (emailOrder.get(b.email.toLowerCase()) ?? 0))
 
     // Add advanced email intelligence to each result
     const resultsWithIntelligence = await Promise.all(
