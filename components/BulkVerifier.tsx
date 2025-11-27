@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Progress } from '../components/ui/progress'
-import { CheckCircle2, XCircle, Loader2, Download, Shield, AlertTriangle, Mail, Database, Server, Upload, Copy, Check, FolderPlus, FileSpreadsheet, FileText } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Download, AlertTriangle, Upload, Copy, Check, FolderPlus, FileSpreadsheet, FileText } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -640,164 +640,140 @@ export default function BulkVerifier() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="rounded-[12px] border">
+              <div className="rounded-[12px] border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Email</TableHead>
+                      <TableHead className="sticky left-0 bg-background">Email</TableHead>
                       <TableHead className="text-center">Valid</TableHead>
-                      <TableHead className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          Syntax
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Database className="h-3 w-3" />
-                          DNS
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Server className="h-3 w-3" />
-                          SMTP
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          Disposable
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Server className="h-3 w-3" />
-                          Catch-All
-                        </div>
-                      </TableHead>
+                      <TableHead className="text-center">Syntax</TableHead>
+                      <TableHead className="text-center">DNS</TableHead>
+                      <TableHead className="text-center">SMTP</TableHead>
+                      <TableHead className="text-center">Disposable</TableHead>
+                      <TableHead className="text-center">Catch-All</TableHead>
                       <TableHead className="text-center">Reputation</TableHead>
                       <TableHead className="text-center">Risk</TableHead>
+                      <TableHead className="text-center">Quality</TableHead>
                       <TableHead className="text-center">Inbox %</TableHead>
                       <TableHead>Message</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {results.results.map((result: VerificationResult, index: number) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-mono text-sm font-medium">
-                          {result.email}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.valid ? (
-                            <Badge>
-                              <CheckCircle2 className="h-3 w-3" />
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              <XCircle className="h-3 w-3" />
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.syntax ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-destructive mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.dns ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-destructive mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.smtp ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-muted-foreground mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.disposable ? (
-                            <Badge variant="outline">
-                              <AlertTriangle className="h-3 w-3" />
-                            </Badge>
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.catch_all ? (
-                            <Badge variant="outline">
-                              <AlertTriangle className="h-3 w-3" />
-                            </Badge>
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4 text-green-600 mx-auto" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.reputation_score !== undefined ? (
-                            <div className="flex flex-col items-center gap-1">
-                              <span className={`text-sm font-semibold ${
-                                result.reputation_score >= 80 ? 'text-green-600' :
-                                result.reputation_score >= 60 ? 'text-blue-600' :
-                                result.reputation_score >= 40 ? 'text-yellow-600' :
-                                'text-red-600'
-                              }`}>
-                                {result.reputation_score}
-                              </span>
-                              <Progress 
-                                value={result.reputation_score} 
-                                className={`h-1 w-12 ${
-                                  result.reputation_score >= 80 ? 'bg-green-100 [&>div]:bg-green-600' :
-                                  result.reputation_score >= 60 ? 'bg-blue-100 [&>div]:bg-blue-600' :
-                                  result.reputation_score >= 40 ? 'bg-yellow-100 [&>div]:bg-yellow-600' :
-                                  'bg-red-100 [&>div]:bg-red-600'
-                                }`}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex flex-col gap-1 items-center">
-                            {result.is_spam_trap && (
-                              <Badge variant="destructive" className="text-xs">
-                                <AlertTriangle className="h-2 w-2" />
-                              </Badge>
+                    {results.results.map((result: VerificationResult, index: number) => {
+                      // Calculate quality score
+                      const qualityScore = result.reputation_score ?? (() => {
+                        let score = 0
+                        if (result.syntax) score += 15
+                        if (result.dns) score += 15
+                        if (result.smtp) score += 25
+                        if (!result.catch_all) score += 15
+                        if (!result.disposable) score += 15
+                        if (!result.is_role_based) score += 5
+                        if (!result.is_spam_trap) score += 10
+                        return Math.min(100, score)
+                      })()
+                      
+                      // Calculate inbox score
+                      const inboxScore = result.inbox_placement_score ?? (result.smtp ? (result.catch_all ? 60 : 85) : 20)
+                      
+                      // Determine risk level
+                      const getRisk = () => {
+                        if (result.is_spam_trap) return { label: 'High', color: 'text-red-600 bg-red-50' }
+                        if (result.disposable) return { label: 'High', color: 'text-red-600 bg-red-50' }
+                        if (!result.smtp) return { label: 'Medium', color: 'text-orange-600 bg-orange-50' }
+                        if (result.catch_all) return { label: 'Medium', color: 'text-yellow-600 bg-yellow-50' }
+                        if (result.is_role_based) return { label: 'Low', color: 'text-yellow-600 bg-yellow-50' }
+                        return { label: 'Low', color: 'text-green-600 bg-green-50' }
+                      }
+                      const risk = getRisk()
+                      
+                      return (
+                        <TableRow key={index}>
+                          <TableCell className="font-mono text-sm font-medium sticky left-0 bg-background">
+                            {result.email}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {result.valid ? (
+                              <span className="text-green-600 font-medium">Yes</span>
+                            ) : (
+                              <span className="text-red-600 font-medium">No</span>
                             )}
-                            {result.is_role_based && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Mail className="h-2 w-2" />
-                              </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {result.syntax ? (
+                              <span className="text-green-600 font-medium">Yes</span>
+                            ) : (
+                              <span className="text-red-600 font-medium">No</span>
                             )}
-                            {!result.is_spam_trap && !result.is_role_based && (
-                              <span className="text-muted-foreground text-xs">-</span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {result.dns ? (
+                              <span className="text-green-600 font-medium">Yes</span>
+                            ) : (
+                              <span className="text-red-600 font-medium">No</span>
                             )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.inbox_placement_score !== undefined ? (
-                            <span className={`text-sm font-medium ${
-                              result.inbox_placement_score >= 70 ? 'text-green-600' :
-                              result.inbox_placement_score >= 40 ? 'text-yellow-600' :
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {result.smtp ? (
+                              <span className="text-green-600 font-medium">Yes</span>
+                            ) : (
+                              <span className="text-red-600 font-medium">No</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {result.disposable ? (
+                              <span className="text-red-600 font-medium">Yes</span>
+                            ) : (
+                              <span className="text-green-600 font-medium">No</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {result.catch_all ? (
+                              <span className="text-yellow-600 font-medium">Yes</span>
+                            ) : (
+                              <span className="text-green-600 font-medium">No</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={`font-bold ${
+                              qualityScore >= 80 ? 'text-green-600' :
+                              qualityScore >= 60 ? 'text-yellow-600' :
+                              qualityScore >= 40 ? 'text-orange-600' :
                               'text-red-600'
                             }`}>
-                              {result.inbox_placement_score}%
+                              {qualityScore}
                             </span>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {result.message}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className={`${risk.color} border-0`}>
+                              {risk.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={`font-bold ${
+                              qualityScore >= 80 ? 'text-green-600' :
+                              qualityScore >= 60 ? 'text-yellow-600' :
+                              qualityScore >= 40 ? 'text-orange-600' :
+                              'text-red-600'
+                            }`}>
+                              {qualityScore}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={`font-medium ${
+                              inboxScore >= 70 ? 'text-green-600' :
+                              inboxScore >= 40 ? 'text-yellow-600' :
+                              'text-red-600'
+                            }`}>
+                              {inboxScore}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                            {result.message}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </div>
