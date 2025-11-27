@@ -118,13 +118,14 @@ export async function verifyEmailsParallel(
     .filter(e => e.result === null)
     .map(e => e.email)
 
-  // Check if SMTP service is configured
+  // Check if SMTP service is configured - READ AT RUNTIME, NOT MODULE LOAD
   const smtpServiceUrl = process.env.SMTP_SERVICE_URL
   const smtpServiceKey = process.env.SMTP_SERVICE_API_KEY
 
-  console.log('[Parallel Verifier] SMTP Service URL:', smtpServiceUrl ? 'configured' : 'NOT SET')
-  console.log('[Parallel Verifier] SMTP Service Key:', smtpServiceKey ? 'configured' : 'NOT SET')
+  console.log('[Parallel Verifier] SMTP Service URL:', smtpServiceUrl || 'NOT SET')
+  console.log('[Parallel Verifier] SMTP Service Key:', smtpServiceKey ? 'SET' : 'NOT SET')
   console.log('[Parallel Verifier] Emails for SMTP:', emailsForSMTP.length)
+  console.log('[Parallel Verifier] Condition check:', !!(smtpServiceUrl && smtpServiceKey && emailsForSMTP.length > 0))
 
   if (smtpServiceUrl && smtpServiceKey && emailsForSMTP.length > 0) {
     // Use Azure SMTP microservice for bulk verification
