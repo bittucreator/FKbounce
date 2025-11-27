@@ -2,6 +2,7 @@ import dns from 'dns'
 import { promisify } from 'util'
 
 const resolveMx = promisify(dns.resolveMx)
+const resolveTxt = promisify(dns.resolveTxt)
 
 interface EmailIntelligence {
   reputationScore: number
@@ -17,6 +18,10 @@ interface EmailIntelligence {
   confidenceLevel: number
   confidenceReasons: string[]
   insights: string[]
+  hasSPF: boolean
+  hasDMARC: boolean
+  spfRecord?: string
+  dmarcPolicy?: string
 }
 
 // Known spam trap patterns and domains
@@ -425,9 +430,17 @@ export async function analyzeDomainHealth(domain: string): Promise<{
   healthScore: number
   mxPriority: number[]
   insights: string[]
+  hasSPF: boolean
+  hasDMARC: boolean
+  spfRecord?: string
+  dmarcPolicy?: string
 }> {
   const insights: string[] = []
   let healthScore = 50
+  let hasSPF = false
+  let hasDMARC = false
+  let spfRecord: string | undefined
+  let dmarcPolicy: string | undefined
   
   try {
     const mxRecords = await resolveMx(domain)
@@ -436,7 +449,7 @@ export async function analyzeDomainHealth(domain: string): Promise<{
     if (mxRecords.length === 0) {
       healthScore = 0
       insights.push('No MX records found - domain cannot receive email')
-      return { healthScore, mxPriority: [], insights }
+      return { healthScore, mxPriority: [], insights, hasSPF: false, hasDMARC: false }
     }
     
     // Multiple MX records = better redundancy
@@ -468,12 +481,70 @@ export async function analyzeDomainHealth(domain: string): Promise<{
       insights.push('Uses enterprise-grade email infrastructure')
     }
     
-    return { healthScore, mxPriority, insights }
+    // Check SPF record
+    try {
+      const txtRecords = await resolveTxt(domain)
+      const spfRecords = txtRecords.flat().filter(txt => txt.startsWith('v=spf1'))
+      if (spfRecords.length > 0) {
+        hasSPF = true
+        spfRecord = spfRecords[0]
+        healthScore += 10
+        insights.push('✓ SPF record configured')
+        
+        // Check SPF strictness
+        if (spfRecord.includes('-all')) {
+          healthScore += 5
+          insights.push('  └ Strict SPF policy (-all)')
+        } else if (spfRecord.includes('~all')) {
+          insights.push('  └ Soft-fail SPF policy (~all)')
+        }
+      } else {
+        healthScore -= 10
+        insights.push('✗ No SPF record found')
+      }
+    } catch (error) {
+      insights.push('✗ Could not check SPF record')
+    }
+    
+    // Check DMARC record
+    try {
+      const dmarcRecords = await resolveTxt(`_dmarc.${domain}`)
+      const dmarc = dmarcRecords.flat().find(txt => txt.startsWith('v=DMARC1'))
+      if (dmarc) {
+        hasDMARC = true
+        healthScore += 10
+        insights.push('✓ DMARC record configured')
+        
+        // Parse DMARC policy
+        const policyMatch = dmarc.match(/p=(none|quarantine|reject)/i)
+        if (policyMatch) {
+          dmarcPolicy = policyMatch[1].toLowerCase()
+          if (dmarcPolicy === 'reject') {
+            healthScore += 10
+            insights.push('  └ Strict DMARC policy (p=reject)')
+          } else if (dmarcPolicy === 'quarantine') {
+            healthScore += 5
+            insights.push('  └ Moderate DMARC policy (p=quarantine)')
+          } else {
+            insights.push('  └ Monitoring-only DMARC (p=none)')
+          }
+        }
+      } else {
+        healthScore -= 5
+        insights.push('✗ No DMARC record found')
+      }
+    } catch (error) {
+      insights.push('✗ Could not check DMARC record')
+    }
+    
+    return { healthScore, mxPriority, insights, hasSPF, hasDMARC, spfRecord, dmarcPolicy }
   } catch (error) {
     return {
       healthScore: 0,
       mxPriority: [],
-      insights: ['Unable to resolve MX records - domain may be invalid']
+      insights: ['Unable to resolve MX records - domain may be invalid'],
+      hasSPF: false,
+      hasDMARC: false
     }
   }
 }
@@ -530,7 +601,7 @@ export async function analyzeEmailIntelligence(
   const insights: string[] = []
   
   // Analyze domain health
-  const { healthScore: domainHealthScore, mxPriority, insights: domainInsights } = await analyzeDomainHealth(domain)
+  const { healthScore: domainHealthScore, mxPriority, insights: domainInsights, hasSPF, hasDMARC, spfRecord, dmarcPolicy } = await analyzeDomainHealth(domain)
   insights.push(...domainInsights)
   
   // Get MX records for reputation calculation
@@ -629,6 +700,10 @@ export async function analyzeEmailIntelligence(
     smtpProviderType: smtpProviderInfo?.type,
     confidenceLevel,
     confidenceReasons,
-    insights
+    insights,
+    hasSPF,
+    hasDMARC,
+    spfRecord,
+    dmarcPolicy
   }
 }
