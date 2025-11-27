@@ -1,7 +1,7 @@
 import dns from 'dns'
-import net from 'net'
 import emailValidator from 'email-validator'
 import { dnsCache } from './dns-cache'
+import { verifySMTPBulk } from './smtp-service'
 // @ts-ignore
 import disposableDomains from 'disposable-email-domains'
 
@@ -13,6 +13,7 @@ interface VerificationResult {
   smtp: boolean
   disposable: boolean
   catch_all: boolean
+  smtp_provider?: string
   message: string
 }
 
@@ -31,225 +32,8 @@ interface ParallelVerifierOptions {
   }) => void
 }
 
-async function checkSMTP(email: string, mxRecords: dns.MxRecord[], attempt: number = 0, mxIndex: number = 0): Promise<boolean> {
-  if (!mxRecords || mxRecords.length === 0) {
-    return false
-  }
-
-  // Sort MX records by priority (lower = higher priority)
-  const sortedMx = [...mxRecords].sort((a, b) => a.priority - b.priority)
-  const currentMx = sortedMx[mxIndex]
-  
-  if (!currentMx) {
-    return false
-  }
-
-  return new Promise((resolve) => {
-    const socket = net.createConnection(25, currentMx.exchange)
-    let responses: string[] = []
-    let accepted = false
-
-    socket.setTimeout(10000)
-
-    socket.on('connect', () => {
-      socket.write(`HELO verifier.com\r\n`)
-    })
-
-    socket.on('data', (data) => {
-      const response = data.toString()
-      responses.push(response)
-      
-      // Initial connection greeting (220)
-      if (response.includes('220') && !responses.some(r => r.includes('MAIL FROM'))) {
-        socket.write(`MAIL FROM:<test@verifier.com>\r\n`)
-      } 
-      // MAIL FROM accepted (250), now send RCPT TO
-      else if (response.includes('250') && responses.filter(r => r.includes('250')).length === 1) {
-        socket.write(`RCPT TO:<${email}>\r\n`)
-      } 
-      // RCPT TO accepted (250) - email exists!
-      else if (response.includes('250') && responses.filter(r => r.includes('250')).length >= 2) {
-        accepted = true
-        socket.write(`QUIT\r\n`)
-        socket.end()
-      } 
-      // RCPT TO rejected (550, 551, 553) - email doesn't exist
-      else if (response.includes('550') || response.includes('551') || response.includes('553')) {
-        accepted = false
-        socket.write(`QUIT\r\n`)
-        socket.end()
-      }
-    })
-
-    socket.on('timeout', async () => {
-      socket.destroy()
-      // Try next MX server (fallback)
-      if (mxIndex + 1 < sortedMx.length) {
-        resolve(await checkSMTP(email, mxRecords, 0, mxIndex + 1))
-      }
-      // Retry on same server
-      else if (attempt < 2) {
-        const delay = Math.pow(2, attempt) * 1000
-        await new Promise(r => setTimeout(r, delay))
-        resolve(await checkSMTP(email, mxRecords, attempt + 1, mxIndex))
-      } else {
-        resolve(false)
-      }
-    })
-
-    socket.on('error', async () => {
-      // Try next MX server (fallback)
-      if (mxIndex + 1 < sortedMx.length) {
-        resolve(await checkSMTP(email, mxRecords, 0, mxIndex + 1))
-      }
-      // Retry on same server
-      else if (attempt < 2) {
-        const delay = Math.pow(2, attempt) * 1000
-        await new Promise(r => setTimeout(r, delay))
-        resolve(await checkSMTP(email, mxRecords, attempt + 1, mxIndex))
-      } else {
-        resolve(false)
-      }
-    })
-
-    socket.on('close', () => {
-      resolve(accepted)
-    })
-  })
-}
-
 function isDisposable(domain: string): boolean {
   return disposableDomains.includes(domain.toLowerCase())
-}
-
-async function checkCatchAll(domain: string, mxRecords: dns.MxRecord[], mxIndex: number = 0): Promise<boolean> {
-  if (!mxRecords || mxRecords.length === 0) {
-    return false
-  }
-
-  // Sort MX records by priority
-  const sortedMx = [...mxRecords].sort((a, b) => a.priority - b.priority)
-  const currentMx = sortedMx[mxIndex]
-  
-  if (!currentMx) {
-    return false
-  }
-
-  const randomEmail = `random${Date.now()}${Math.random().toString(36).substring(7)}@${domain}`
-  
-  return new Promise((resolve) => {
-    const socket = net.createConnection(25, currentMx.exchange)
-    let responses: string[] = []
-    let catchAllDetected = false
-
-    socket.setTimeout(10000)
-
-    socket.on('connect', () => {
-      socket.write(`HELO verifier.com\r\n`)
-    })
-
-    socket.on('data', (data) => {
-      const response = data.toString()
-      responses.push(response)
-      
-      if (response.includes('220') && !responses.some(r => r.includes('MAIL FROM'))) {
-        socket.write(`MAIL FROM:<test@verifier.com>\r\n`)
-      } else if (response.includes('250') && responses.filter(r => r.includes('250')).length === 1) {
-        socket.write(`RCPT TO:<${randomEmail}>\r\n`)
-      } else if (response.includes('250') && responses.filter(r => r.includes('250')).length >= 2) {
-        catchAllDetected = true
-        socket.write(`QUIT\r\n`)
-        socket.end()
-      } else if (response.includes('550') || response.includes('551') || response.includes('553')) {
-        catchAllDetected = false
-        socket.write(`QUIT\r\n`)
-        socket.end()
-      }
-    })
-
-    socket.on('timeout', async () => {
-      socket.destroy()
-      // Try next MX server (fallback)
-      if (mxIndex + 1 < sortedMx.length) {
-        resolve(await checkCatchAll(domain, mxRecords, mxIndex + 1))
-      } else {
-        resolve(catchAllDetected)
-      }
-    })
-
-    socket.on('error', async () => {
-      // Try next MX server (fallback)
-      if (mxIndex + 1 < sortedMx.length) {
-        resolve(await checkCatchAll(domain, mxRecords, mxIndex + 1))
-      } else {
-        resolve(catchAllDetected)
-      }
-    })
-
-    socket.on('close', () => {
-      resolve(catchAllDetected)
-    })
-  })
-}
-
-async function verifyEmail(
-  email: string,
-  enableCatchAll: boolean = true,
-  enableCache: boolean = true
-): Promise<VerificationResult> {
-  const result: VerificationResult = {
-    email,
-    valid: false,
-    syntax: false,
-    dns: false,
-    smtp: false,
-    disposable: false,
-    catch_all: false,
-    message: ''
-  }
-
-  result.syntax = emailValidator.validate(email)
-  if (!result.syntax) {
-    result.message = 'Invalid email syntax'
-    return result
-  }
-
-  const domain = email.split('@')[1]
-
-  result.disposable = isDisposable(domain)
-  if (result.disposable) {
-    result.message = 'Disposable email address detected'
-    return result
-  }
-
-  try {
-    const mxRecords = await dnsCache.getMxRecords(domain)
-    result.dns = !!(mxRecords && mxRecords.length > 0)
-    
-    if (!result.dns || !mxRecords) {
-      result.message = 'No MX records found for domain'
-      return result
-    }
-
-    result.smtp = await checkSMTP(email, mxRecords)
-    
-    if (enableCatchAll) {
-      result.catch_all = await checkCatchAll(domain, mxRecords)
-    }
-    
-    result.valid = result.syntax && result.dns
-    
-    if (result.catch_all) {
-      result.message = 'Email domain accepts all addresses (catch-all)'
-    } else {
-      result.message = result.valid ? 'Email is valid' : 'Email verification failed'
-    }
-    
-  } catch (error) {
-    result.message = 'DNS lookup failed'
-  }
-
-  return result
 }
 
 /**
@@ -272,14 +56,14 @@ function groupEmailsByDomain(emails: string[]): Map<string, string[]> {
 }
 
 /**
- * Parallel email verifier with worker pool
+ * Parallel email verifier using Azure SMTP microservice
  */
 export async function verifyEmailsParallel(
   emails: string[],
   options: ParallelVerifierOptions = {}
 ): Promise<VerificationResult[]> {
   const {
-    concurrency = 2000,
+    concurrency = 100, // Batch size for microservice calls
     enableCatchAll = true,
     enableCache = true,
     onProgress
@@ -289,47 +73,189 @@ export async function verifyEmailsParallel(
   const startTime = Date.now()
   let processedCount = 0
 
-  // Group emails by domain for better cache utilization
-  const domainGroups = groupEmailsByDomain(emails)
-  const sortedDomains = Array.from(domainGroups.keys()).sort(
-    (a, b) => domainGroups.get(b)!.length - domainGroups.get(a)!.length
-  )
+  // Pre-filter emails with syntax/disposable checks (fast, local)
+  const preFilteredEmails: { email: string; result: VerificationResult | null }[] = []
+  
+  for (const email of emails) {
+    const result: VerificationResult = {
+      email,
+      valid: false,
+      syntax: false,
+      dns: false,
+      smtp: false,
+      disposable: false,
+      catch_all: false,
+      message: ''
+    }
 
-  // Flatten back to email list but domain-grouped
-  const sortedEmails: string[] = []
-  sortedDomains.forEach(domain => {
-    sortedEmails.push(...domainGroups.get(domain)!)
-  })
+    // Syntax check
+    result.syntax = emailValidator.validate(email)
+    if (!result.syntax) {
+      result.message = 'Invalid email syntax'
+      preFilteredEmails.push({ email, result })
+      continue
+    }
 
-  // Process in batches with concurrency limit
-  for (let i = 0; i < sortedEmails.length; i += concurrency) {
-    const batch = sortedEmails.slice(i, i + concurrency)
+    // Disposable check
+    const domain = email.split('@')[1]
+    result.disposable = isDisposable(domain)
+    if (result.disposable) {
+      result.message = 'Disposable email address detected'
+      preFilteredEmails.push({ email, result })
+      continue
+    }
+
+    // Needs SMTP verification
+    preFilteredEmails.push({ email, result: null })
+  }
+
+  // Separate emails that need SMTP verification
+  const emailsForSMTP = preFilteredEmails
+    .filter(e => e.result === null)
+    .map(e => e.email)
+
+  // Check if SMTP service is configured
+  const smtpServiceUrl = process.env.SMTP_SERVICE_URL
+  const smtpServiceKey = process.env.SMTP_SERVICE_API_KEY
+
+  if (smtpServiceUrl && smtpServiceKey && emailsForSMTP.length > 0) {
+    // Use Azure SMTP microservice for bulk verification
+    // Process in batches of 100 (microservice limit)
+    for (let i = 0; i < emailsForSMTP.length; i += 100) {
+      const batch = emailsForSMTP.slice(i, i + 100)
+      
+      try {
+        const smtpResults = await verifySMTPBulk(batch)
+        
+        // Map SMTP results back to verification results
+        for (const smtpResult of smtpResults.results) {
+          const domain = smtpResult.email.split('@')[1]
+          let mxRecords: dns.MxRecord[] = []
+          
+          try {
+            mxRecords = await dnsCache.getMxRecords(domain) || []
+          } catch (e) {
+            // DNS failed
+          }
+
+          const result: VerificationResult = {
+            email: smtpResult.email,
+            valid: true,
+            syntax: true,
+            dns: mxRecords.length > 0,
+            smtp: smtpResult.smtp,
+            disposable: false,
+            catch_all: enableCatchAll ? smtpResult.catch_all : false,
+            smtp_provider: smtpResult.smtp_provider || undefined,
+            message: smtpResult.catch_all 
+              ? 'Email domain accepts all addresses (catch-all)'
+              : (smtpResult.smtp ? 'Email is valid' : 'Email verification failed')
+          }
+          
+          results.push(result)
+        }
+      } catch (error) {
+        console.error('SMTP service bulk error:', error)
+        // Fallback: mark as unverified
+        for (const email of batch) {
+          const domain = email.split('@')[1]
+          let mxRecords: dns.MxRecord[] = []
+          
+          try {
+            mxRecords = await dnsCache.getMxRecords(domain) || []
+          } catch (e) {}
+
+          results.push({
+            email,
+            valid: mxRecords.length > 0,
+            syntax: true,
+            dns: mxRecords.length > 0,
+            smtp: false,
+            disposable: false,
+            catch_all: false,
+            message: 'SMTP verification unavailable'
+          })
+        }
+      }
+
+      processedCount += batch.length
+
+      // Report progress
+      if (onProgress) {
+        const elapsedSeconds = (Date.now() - startTime) / 1000
+        const speed = processedCount / elapsedSeconds
+        const validCount = results.filter(r => r.valid).length
+        const invalidCount = results.filter(r => !r.valid).length
+
+        onProgress({
+          processed: processedCount,
+          total: emails.length,
+          percentage: Math.round((processedCount / emails.length) * 100),
+          speed: Math.round(speed * 10) / 10,
+          currentEmail: batch[batch.length - 1],
+          valid: validCount,
+          invalid: invalidCount
+        })
+      }
+    }
+  } else {
+    // No SMTP service configured - DNS-only verification
+    console.warn('SMTP microservice not configured, using DNS-only verification for bulk')
     
-    const batchResults = await Promise.all(
-      batch.map(email => verifyEmail(email, enableCatchAll, enableCache))
-    )
-    
-    results.push(...batchResults)
-    processedCount += batch.length
+    for (const email of emailsForSMTP) {
+      const domain = email.split('@')[1]
+      let mxRecords: dns.MxRecord[] = []
+      
+      try {
+        mxRecords = await dnsCache.getMxRecords(domain) || []
+      } catch (e) {}
 
-    // Report progress
-    if (onProgress) {
-      const elapsedSeconds = (Date.now() - startTime) / 1000
-      const speed = processedCount / elapsedSeconds
-      const validCount = results.filter(r => r.valid).length
-      const invalidCount = results.filter(r => !r.valid).length
-
-      onProgress({
-        processed: processedCount,
-        total: sortedEmails.length,
-        percentage: Math.round((processedCount / sortedEmails.length) * 100),
-        speed: Math.round(speed * 10) / 10,
-        currentEmail: batch[batch.length - 1],
-        valid: validCount,
-        invalid: invalidCount
+      results.push({
+        email,
+        valid: mxRecords.length > 0,
+        syntax: true,
+        dns: mxRecords.length > 0,
+        smtp: false,
+        disposable: false,
+        catch_all: false,
+        message: mxRecords.length > 0 ? 'DNS valid (SMTP not checked)' : 'No MX records found'
       })
+      
+      processedCount++
+      
+      if (onProgress && processedCount % 100 === 0) {
+        const elapsedSeconds = (Date.now() - startTime) / 1000
+        const speed = processedCount / elapsedSeconds
+        const validCount = results.filter(r => r.valid).length
+        const invalidCount = results.filter(r => !r.valid).length
+
+        onProgress({
+          processed: processedCount,
+          total: emails.length,
+          percentage: Math.round((processedCount / emails.length) * 100),
+          speed: Math.round(speed * 10) / 10,
+          currentEmail: email,
+          valid: validCount,
+          invalid: invalidCount
+        })
+      }
     }
   }
+
+  // Add pre-filtered results (syntax/disposable failures)
+  for (const item of preFilteredEmails) {
+    if (item.result !== null) {
+      results.push(item.result)
+    }
+  }
+
+  // Sort results to match original email order
+  const emailOrder = new Map(emails.map((e, i) => [e.toLowerCase(), i]))
+  results.sort((a, b) => {
+    const orderA = emailOrder.get(a.email.toLowerCase()) ?? 0
+    const orderB = emailOrder.get(b.email.toLowerCase()) ?? 0
+    return orderA - orderB
+  })
 
   return results
 }
