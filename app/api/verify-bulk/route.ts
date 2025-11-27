@@ -220,6 +220,8 @@ export async function POST(request: NextRequest) {
           // Estimate time
           const estimate = estimateVerificationTime(uniqueEmails.length, concurrency)
           
+          console.log('[verify-bulk] About to call verifyEmailsParallel with', uniqueEmails.length, 'emails')
+          
           // Send initial estimate
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             type: 'estimate',
@@ -230,6 +232,7 @@ export async function POST(request: NextRequest) {
           })}\n\n`))
 
           // Verify emails in parallel with progress callback
+          console.log('[verify-bulk] Calling verifyEmailsParallel NOW')
           const results = await verifyEmailsParallel(uniqueEmails, {
             concurrency,
             onProgress: async (progress) => {

@@ -62,12 +62,16 @@ export async function verifyEmailsParallel(
   emails: string[],
   options: ParallelVerifierOptions = {}
 ): Promise<VerificationResult[]> {
+  console.log('[verifyEmailsParallel] FUNCTION CALLED with', emails.length, 'emails')
+  
   const {
     concurrency = 100, // Batch size for microservice calls
     enableCatchAll = true,
     enableCache = true,
     onProgress
   } = options
+
+  console.log('[verifyEmailsParallel] Options:', { concurrency, enableCatchAll, enableCache })
 
   const results: VerificationResult[] = []
   const startTime = Date.now()
