@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Progress } from '../components/ui/progress'
-import { CheckCircle2, XCircle, Loader2, Download, AlertTriangle, Upload, Copy, Check, FolderPlus, FileSpreadsheet, FileText } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Download, AlertTriangle, Upload, FolderPlus, FileSpreadsheet, FileText } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -60,7 +60,6 @@ export default function BulkVerifier() {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<BulkVerificationResponse | null>(null)
   const [error, setError] = useState('')
-  const [copied, setCopied] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [lists, setLists] = useState<any[]>([])
   const [isListDialogOpen, setIsListDialogOpen] = useState(false)
@@ -95,15 +94,6 @@ export default function BulkVerifier() {
       .map((e: string) => e.trim().replace(/\s+/g, '').toLowerCase())
       .filter((e: string) => e.length > 0)
       .join('\n')
-  }
-
-  const copyToClipboard = async () => {
-    if (!results) return
-    
-    const validEmails = results.results.filter(r => r.valid).map(r => r.email).join('\n')
-    await navigator.clipboard.writeText(validEmails)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   const saveToList = async (listId: string) => {
@@ -383,7 +373,7 @@ export default function BulkVerifier() {
                   type="button"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full items-center justify-center flex gap-0"
+                  className="w-full items-center justify-center flex gap-2"
                 >
                   <img src="/csv-upload.svg" alt="Upload" className="mr-2 h-6 w-6" />
                   Upload CSV File
@@ -425,7 +415,7 @@ export default function BulkVerifier() {
             <Button 
               type="submit" 
               disabled={loading}
-              className="w-full items-center justify-center flex gap-0"
+              className="w-full items-center justify-center flex gap-2"
             >
               {loading ? (
                 <>
@@ -512,7 +502,7 @@ export default function BulkVerifier() {
                 </Card>
               </div>
 
-              {results.duplicates && results.duplicates > 0 && (
+              {results.duplicates !== undefined && results.duplicates > 0 && (
                 <Card className="mb-6 border-yellow-500 bg-yellow-50">
                   <CardContent className="pt-6">
                     <div className="flex items-start gap-3">
@@ -541,56 +531,34 @@ export default function BulkVerifier() {
                 </Card>
               )}
 
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Export Results
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => downloadResults('csv')}>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Download as CSV
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => downloadResults('xlsx')}>
-                        <FileSpreadsheet className="mr-2 h-4 w-4" />
-                        Download as Excel (.xlsx)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => downloadResults('xls')}>
-                        <FileSpreadsheet className="mr-2 h-4 w-4" />
-                        Download as Excel 2003 (.xls)
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Button
-                    onClick={copyToClipboard}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="mr-2 h-4 w-4" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <img src="/Copy.svg" alt="Copy" className="mr-1 h-4 w-4" />
-                        Copy Valid Emails
-                      </>
-                    )}
-                  </Button>
-                </div>
+              <div className="flex gap-2 pt-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex-1">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Results
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={() => downloadResults('csv')}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Download as CSV
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadResults('xlsx')}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Download as Excel (.xlsx)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => downloadResults('xls')}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Download as Excel 2003 (.xls)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Dialog open={isListDialogOpen} onOpenChange={setIsListDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="outline" size="sm" className="flex-1">
                       <FolderPlus className="h-4 w-4 mr-2" />
-                      Save All to List ({results.total} emails)
+                      Save to List
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -619,9 +587,6 @@ export default function BulkVerifier() {
                               style={{ backgroundColor: list.color }}
                             />
                             {list.name}
-                            <Badge variant="secondary" className="ml-auto">
-                              {list.email_count || 0}
-                            </Badge>
                           </Button>
                         ))
                       )}

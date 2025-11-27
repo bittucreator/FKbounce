@@ -2,9 +2,15 @@
 
 import { Card, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
-import { AlertTriangle, Copy, Check, FolderPlus } from 'lucide-react'
+import { AlertTriangle, Download, FolderPlus, FileSpreadsheet, FileText } from 'lucide-react'
 import { Button } from './ui/button'
-import { useState } from 'react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu'
+import * as XLSX from 'xlsx'
 
 interface VerificationResult {
   email: string
@@ -39,8 +45,6 @@ interface EmailResultCardProps {
 }
 
 export default function EmailResultCard({ result, onSaveToList }: EmailResultCardProps) {
-  const [copied, setCopied] = useState(false)
-
   // Determine risk level
   const getRisk = () => {
     if (result.is_spam_trap) return { label: 'High', color: 'text-red-600 dark:text-red-400' }
@@ -97,11 +101,51 @@ export default function EmailResultCard({ result, onSaveToList }: EmailResultCar
     return freeProviders.includes(domain.toLowerCase())
   }
 
-  const copyToClipboard = async () => {
-    const text = JSON.stringify(result, null, 2)
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  // Download result in different formats
+  const downloadResult = (format: 'csv' | 'xlsx' | 'json') => {
+    const data = {
+      Email: result.email,
+      Valid: result.valid ? 'Yes' : 'No',
+      Syntax: result.syntax ? 'Yes' : 'No',
+      DNS: result.dns ? 'Yes' : 'No',
+      SMTP: result.smtp ? 'Yes' : 'No',
+      Disposable: result.disposable ? 'Yes' : 'No',
+      'Catch-All': result.catch_all ? 'Yes' : 'No',
+      Reputation: qualityScore,
+      Risk: risk.label,
+      'Quality Score': `${qualityScore}%`,
+      'Inbox %': `${inboxScore}%`,
+      Message: result.message,
+      Provider: result.smtp_provider || '--',
+      'MX Record': getMxRecord(),
+      'Is Free': isFreeEmail() ? 'Yes' : 'No'
+    }
+
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${result.email.replace('@', '_at_')}-verification.json`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } else if (format === 'csv') {
+      const headers = Object.keys(data).join(',')
+      const values = Object.values(data).map(v => `"${v}"`).join(',')
+      const csv = `${headers}\n${values}`
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${result.email.replace('@', '_at_')}-verification.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } else {
+      const worksheet = XLSX.utils.json_to_sheet([data])
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Verification')
+      XLSX.writeFile(workbook, `${result.email.replace('@', '_at_')}-verification.xlsx`)
+    }
   }
 
   return (
@@ -242,24 +286,28 @@ export default function EmailResultCard({ result, onSaveToList }: EmailResultCar
 
         {/* Action Buttons */}
         <div className="flex gap-2 pt-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={copyToClipboard}
-            className="flex-1"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4 mr-2" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy Result
-              </>
-            )}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1">
+                <Download className="h-4 w-4 mr-2" />
+                Download Result
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => downloadResult('csv')}>
+                <FileText className="mr-2 h-4 w-4" />
+                Download as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => downloadResult('xlsx')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Download as Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => downloadResult('json')}>
+                <FileText className="mr-2 h-4 w-4" />
+                Download as JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {onSaveToList && (
             <Button
               variant="outline"
