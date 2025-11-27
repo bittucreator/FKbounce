@@ -156,6 +156,7 @@ export async function verifyEmailsParallel(
               : (smtpResult.smtp ? 'Email is valid' : 'Email verification failed')
           }
           
+          console.log('[Parallel Verifier] Result for', smtpResult.email, '- SMTP:', result.smtp, 'Catch-All:', result.catch_all)
           results.push(result)
         }
       } catch (error) {
