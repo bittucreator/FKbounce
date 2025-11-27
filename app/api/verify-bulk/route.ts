@@ -39,6 +39,11 @@ interface VerificationResult {
   inbox_placement_score?: number
   mx_priority?: number[]
   insights?: string[]
+  // SPF/DMARC
+  has_spf?: boolean
+  has_dmarc?: boolean
+  spf_record?: string
+  dmarc_policy?: string
 }
 
 interface BulkVerificationResponse {
@@ -471,7 +476,11 @@ export async function POST(request: NextRequest) {
                   domain_health_score: intelligence.domainHealthScore,
                   inbox_placement_score: intelligence.inboxPlacementScore,
                   mx_priority: intelligence.mxPriority,
-                  insights: intelligence.insights
+                  insights: intelligence.insights,
+                  has_spf: intelligence.hasSPF,
+                  has_dmarc: intelligence.hasDMARC,
+                  spf_record: intelligence.spfRecord,
+                  dmarc_policy: intelligence.dmarcPolicy
                 }
               } catch (error) {
                 // Return original result if intelligence analysis fails
@@ -603,7 +612,11 @@ export async function POST(request: NextRequest) {
             domain_health_score: intelligence.domainHealthScore,
             inbox_placement_score: intelligence.inboxPlacementScore,
             mx_priority: intelligence.mxPriority,
-            insights: intelligence.insights
+            insights: intelligence.insights,
+            has_spf: intelligence.hasSPF,
+            has_dmarc: intelligence.hasDMARC,
+            spf_record: intelligence.spfRecord,
+            dmarc_policy: intelligence.dmarcPolicy
           }
         } catch (error) {
           return result
