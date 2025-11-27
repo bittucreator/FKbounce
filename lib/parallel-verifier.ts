@@ -62,7 +62,11 @@ export async function verifyEmailsParallel(
   emails: string[],
   options: ParallelVerifierOptions = {}
 ): Promise<VerificationResult[]> {
-  console.log('[verifyEmailsParallel] FUNCTION CALLED with', emails.length, 'emails')
+  // BUILD TIMESTAMP: 2025-11-27T12:05:00Z - FORCE NEW BUILD
+  console.log('=== PARALLEL VERIFIER ENTRY v2 ===')
+  console.log('=== EMAIL COUNT:', emails.length, '===')
+  console.log('=== SMTP_SERVICE_URL:', process.env.SMTP_SERVICE_URL, '===')
+  console.log('=== SMTP_SERVICE_API_KEY:', process.env.SMTP_SERVICE_API_KEY ? 'YES' : 'NO', '===')
   
   const {
     concurrency = 100, // Batch size for microservice calls
@@ -71,7 +75,7 @@ export async function verifyEmailsParallel(
     onProgress
   } = options
 
-  console.log('[verifyEmailsParallel] Options:', { concurrency, enableCatchAll, enableCache })
+  console.log('=== OPTIONS:', JSON.stringify({ concurrency, enableCatchAll, enableCache }), '===')
 
   const results: VerificationResult[] = []
   const startTime = Date.now()
