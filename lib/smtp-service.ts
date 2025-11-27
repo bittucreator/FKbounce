@@ -6,6 +6,10 @@
 const SMTP_SERVICE_URL = process.env.SMTP_SERVICE_URL || 'http://localhost:3001'
 const SMTP_SERVICE_API_KEY = process.env.SMTP_SERVICE_API_KEY || ''
 
+// Log on module load
+console.log('[SMTP Service] URL:', SMTP_SERVICE_URL)
+console.log('[SMTP Service] API Key configured:', SMTP_SERVICE_API_KEY ? 'YES' : 'NO')
+
 interface SMTPVerificationResult {
   email: string
   smtp: boolean
@@ -25,6 +29,9 @@ interface BulkSMTPResult {
  * Verify a single email via the SMTP microservice
  */
 export async function verifySMTP(email: string): Promise<SMTPVerificationResult> {
+  console.log('[verifySMTP] Called for:', email)
+  console.log('[verifySMTP] Using URL:', SMTP_SERVICE_URL)
+  
   try {
     const response = await fetch(`${SMTP_SERVICE_URL}/verify`, {
       method: 'POST',
@@ -58,6 +65,10 @@ export async function verifySMTP(email: string): Promise<SMTPVerificationResult>
  * Verify multiple emails via the SMTP microservice
  */
 export async function verifySMTPBulk(emails: string[]): Promise<BulkSMTPResult> {
+  console.log('[verifySMTPBulk] Called for', emails.length, 'emails')
+  console.log('[verifySMTPBulk] Using URL:', SMTP_SERVICE_URL)
+  console.log('[verifySMTPBulk] API Key configured:', SMTP_SERVICE_API_KEY ? 'YES' : 'NO')
+  
   try {
     // Split into batches of 100
     const batches: string[][] = []
