@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dns from 'dns'
 import { promisify } from 'util'
-import net from 'net'
 import emailValidator from 'email-validator'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit, rateLimitConfigs } from '@/lib/ratelimit'
@@ -24,6 +23,12 @@ interface VerificationResult {
   disposable: boolean
   catch_all: boolean
   message: string
+  // SMTP Provider
+  smtp_provider?: string
+  smtp_provider_type?: 'enterprise' | 'business' | 'personal' | 'unknown'
+  // Confidence level
+  confidence_level?: number
+  confidence_reasons?: string[]
   // Advanced intelligence
   reputation_score?: number
   is_spam_trap?: boolean
@@ -448,11 +453,16 @@ export async function POST(request: NextRequest) {
                   result.dns,
                   result.smtp,
                   result.disposable,
-                  result.catch_all
+                  result.catch_all,
+                  result.smtp // smtpConnected
                 )
                 
                 return {
                   ...result,
+                  smtp_provider: result.smtp_provider || intelligence.smtpProvider,
+                  smtp_provider_type: intelligence.smtpProviderType,
+                  confidence_level: intelligence.confidenceLevel,
+                  confidence_reasons: intelligence.confidenceReasons,
                   reputation_score: intelligence.reputationScore,
                   is_spam_trap: intelligence.isSpamTrap,
                   is_role_based: intelligence.isRoleBased,
@@ -575,11 +585,16 @@ export async function POST(request: NextRequest) {
             result.dns,
             result.smtp,
             result.disposable,
-            result.catch_all
+            result.catch_all,
+            result.smtp // smtpConnected
           )
           
           return {
             ...result,
+            smtp_provider: result.smtp_provider || intelligence.smtpProvider,
+            smtp_provider_type: intelligence.smtpProviderType,
+            confidence_level: intelligence.confidenceLevel,
+            confidence_reasons: intelligence.confidenceReasons,
             reputation_score: intelligence.reputationScore,
             is_spam_trap: intelligence.isSpamTrap,
             is_role_based: intelligence.isRoleBased,
