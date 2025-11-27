@@ -62,20 +62,12 @@ export async function verifyEmailsParallel(
   emails: string[],
   options: ParallelVerifierOptions = {}
 ): Promise<VerificationResult[]> {
-  // BUILD TIMESTAMP: 2025-11-27T12:05:00Z - FORCE NEW BUILD
-  console.log('=== PARALLEL VERIFIER ENTRY v2 ===')
-  console.log('=== EMAIL COUNT:', emails.length, '===')
-  console.log('=== SMTP_SERVICE_URL:', process.env.SMTP_SERVICE_URL, '===')
-  console.log('=== SMTP_SERVICE_API_KEY:', process.env.SMTP_SERVICE_API_KEY ? 'YES' : 'NO', '===')
-  
   const {
-    concurrency = 100, // Batch size for microservice calls
+    concurrency = 100,
     enableCatchAll = true,
     enableCache = true,
     onProgress
   } = options
-
-  console.log('=== OPTIONS:', JSON.stringify({ concurrency, enableCatchAll, enableCache }), '===')
 
   const results: VerificationResult[] = []
   const startTime = Date.now()
@@ -122,14 +114,9 @@ export async function verifyEmailsParallel(
     .filter(e => e.result === null)
     .map(e => e.email)
 
-  // Check if SMTP service is configured - READ AT RUNTIME, NOT MODULE LOAD
+  // Check if SMTP service is configured at runtime
   const smtpServiceUrl = process.env.SMTP_SERVICE_URL
   const smtpServiceKey = process.env.SMTP_SERVICE_API_KEY
-
-  console.log('[Parallel Verifier] SMTP Service URL:', smtpServiceUrl || 'NOT SET')
-  console.log('[Parallel Verifier] SMTP Service Key:', smtpServiceKey ? 'SET' : 'NOT SET')
-  console.log('[Parallel Verifier] Emails for SMTP:', emailsForSMTP.length)
-  console.log('[Parallel Verifier] Condition check:', !!(smtpServiceUrl && smtpServiceKey && emailsForSMTP.length > 0))
 
   if (smtpServiceUrl && smtpServiceKey && emailsForSMTP.length > 0) {
     // Use Azure SMTP microservice for bulk verification
@@ -165,7 +152,6 @@ export async function verifyEmailsParallel(
               : (smtpResult.smtp ? 'Email is valid' : 'Email verification failed')
           }
           
-          console.log('[Parallel Verifier] Result for', smtpResult.email, '- SMTP:', result.smtp, 'Catch-All:', result.catch_all)
           results.push(result)
         }
       } catch (error) {

@@ -1,14 +1,10 @@
 /**
  * SMTP Service Client
  * Connects to the SMTP microservice for port 25 verification
+ * 
+ * IMPORTANT: All env vars are read at RUNTIME inside functions,
+ * not at module load time, to work correctly with Vercel serverless.
  */
-
-const SMTP_SERVICE_URL = process.env.SMTP_SERVICE_URL || 'http://localhost:3001'
-const SMTP_SERVICE_API_KEY = process.env.SMTP_SERVICE_API_KEY || ''
-
-// Log on module load
-console.log('[SMTP Service] URL:', SMTP_SERVICE_URL)
-console.log('[SMTP Service] API Key configured:', SMTP_SERVICE_API_KEY ? 'YES' : 'NO')
 
 interface SMTPVerificationResult {
   email: string
@@ -29,15 +25,16 @@ interface BulkSMTPResult {
  * Verify a single email via the SMTP microservice
  */
 export async function verifySMTP(email: string): Promise<SMTPVerificationResult> {
-  console.log('[verifySMTP] Called for:', email)
-  console.log('[verifySMTP] Using URL:', SMTP_SERVICE_URL)
+  // Read env vars at runtime, not module load
+  const url = process.env.SMTP_SERVICE_URL || 'http://localhost:3001'
+  const apiKey = process.env.SMTP_SERVICE_API_KEY || ''
   
   try {
-    const response = await fetch(`${SMTP_SERVICE_URL}/verify`, {
+    const response = await fetch(`${url}/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': SMTP_SERVICE_API_KEY
+        'X-API-Key': apiKey
       },
       body: JSON.stringify({ email })
     })
@@ -49,7 +46,6 @@ export async function verifySMTP(email: string): Promise<SMTPVerificationResult>
     return await response.json()
   } catch (error) {
     console.error('SMTP service error:', error)
-    // Return fallback result if service is unavailable
     return {
       email,
       smtp: false,
@@ -65,9 +61,9 @@ export async function verifySMTP(email: string): Promise<SMTPVerificationResult>
  * Verify multiple emails via the SMTP microservice
  */
 export async function verifySMTPBulk(emails: string[]): Promise<BulkSMTPResult> {
-  console.log('[verifySMTPBulk] Called for', emails.length, 'emails')
-  console.log('[verifySMTPBulk] Using URL:', SMTP_SERVICE_URL)
-  console.log('[verifySMTPBulk] API Key configured:', SMTP_SERVICE_API_KEY ? 'YES' : 'NO')
+  // Read env vars at runtime, not module load
+  const url = process.env.SMTP_SERVICE_URL || 'http://localhost:3001'
+  const apiKey = process.env.SMTP_SERVICE_API_KEY || ''
   
   try {
     // Split into batches of 100
@@ -79,11 +75,11 @@ export async function verifySMTPBulk(emails: string[]): Promise<BulkSMTPResult> 
     const allResults: SMTPVerificationResult[] = []
 
     for (const batch of batches) {
-      const response = await fetch(`${SMTP_SERVICE_URL}/verify-bulk`, {
+      const response = await fetch(`${url}/verify-bulk`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': SMTP_SERVICE_API_KEY
+          'X-API-Key': apiKey
         },
         body: JSON.stringify({ emails: batch })
       })
@@ -102,7 +98,6 @@ export async function verifySMTPBulk(emails: string[]): Promise<BulkSMTPResult> 
     }
   } catch (error) {
     console.error('SMTP bulk service error:', error)
-    // Return fallback results if service is unavailable
     return {
       results: emails.map(email => ({
         email,
@@ -121,8 +116,10 @@ export async function verifySMTPBulk(emails: string[]): Promise<BulkSMTPResult> 
  * Check if the SMTP service is available
  */
 export async function checkSMTPServiceHealth(): Promise<boolean> {
+  const url = process.env.SMTP_SERVICE_URL || 'http://localhost:3001'
+  
   try {
-    const response = await fetch(`${SMTP_SERVICE_URL}/health`, {
+    const response = await fetch(`${url}/health`, {
       method: 'GET'
     })
     return response.ok
@@ -135,8 +132,10 @@ export async function checkSMTPServiceHealth(): Promise<boolean> {
  * Test if port 25 is available on the SMTP service
  */
 export async function testPort25(): Promise<{ available: boolean; message: string }> {
+  const url = process.env.SMTP_SERVICE_URL || 'http://localhost:3001'
+  
   try {
-    const response = await fetch(`${SMTP_SERVICE_URL}/test-port25`, {
+    const response = await fetch(`${url}/test-port25`, {
       method: 'GET'
     })
     const result = await response.json()
