@@ -47,13 +47,11 @@ export default function EmailVerifier() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<VerificationResult | null>(null)
   const [error, setError] = useState('')
-  const [usage, setUsage] = useState<{ used: number; limit: number; remaining: number } | null>(null)
   const [lists, setLists] = useState<any[]>([])
   const [isListDialogOpen, setIsListDialogOpen] = useState(false)
   const [savingToList, setSavingToList] = useState(false)
 
   useEffect(() => {
-    fetchUsage()
     fetchLists()
   }, [])
 
@@ -66,18 +64,6 @@ export default function EmailVerifier() {
       }
     } catch (err) {
       console.error('Failed to fetch lists:', err)
-    }
-  }
-
-  const fetchUsage = async () => {
-    try {
-      const response = await fetch('/api/check-limit')
-      if (response.ok) {
-        const data = await response.json()
-        setUsage({ used: data.used, limit: data.limit, remaining: data.remaining })
-      }
-    } catch (err) {
-      console.error('Failed to fetch usage:', err)
     }
   }
 

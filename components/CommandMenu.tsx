@@ -7,7 +7,6 @@ import {
   ListChecks, 
   User, 
   Settings, 
-  CreditCard, 
   LogOut,
   Search,
   FileText,
@@ -106,11 +105,6 @@ export function CommandMenu() {
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
               <Kbd className="ml-auto text-xs">GS</Kbd>
-            </CommandItem>
-            <CommandItem onSelect={() => navigate('/subscription')}>
-              <CreditCard className="mr-2 h-4 w-4" />
-              <span>Manage Subscription</span>
-              <Kbd className="ml-auto text-xs">GP</Kbd>
             </CommandItem>
           </CommandGroup>
 

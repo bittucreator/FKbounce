@@ -14,16 +14,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { LogOut, History, CreditCard, Key, BarChart3, FolderOpen, Settings } from 'lucide-react'
+import { LogOut, History, Key, BarChart3, FolderOpen, Settings } from 'lucide-react'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 
 export default function AuthButton() {
   const [user, setUser] = useState<User | null>(null)
-  const [userPlan, setUserPlan] = useState<string>('free')
-  const [emailsUsed, setEmailsUsed] = useState<number>(0)
-  const [emailsLimit, setEmailsLimit] = useState<number>(500)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
   const supabase = createClient()
@@ -32,22 +27,6 @@ export default function AuthButton() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
-      
-      // Fetch user plan
-      if (user) {
-        const { data: planData } = await supabase
-          .from('user_plans')
-          .select('plan, verifications_used, verifications_limit')
-          .eq('user_id', user.id)
-          .single()
-        
-        if (planData) {
-          setUserPlan(planData.plan)
-          setEmailsUsed(planData.verifications_used || 0)
-          setEmailsLimit(planData.verifications_limit || 500)
-        }
-      }
-      
       setLoading(false)
     }
 
@@ -80,9 +59,6 @@ export default function AuthButton() {
             break
           case 's':
             router.push('/settings')
-            break
-          case 'p':
-            router.push('/subscription')
             break
         }
         document.removeEventListener('keydown', handleSecondKey)
@@ -152,40 +128,17 @@ export default function AuthButton() {
             <AvatarImage src={user.user_metadata?.avatar_url} alt={user.user_metadata?.full_name || user.email} />
             <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
-          {userPlan === 'pro' && (
-            <Badge className="absolute -top-1 -right-1 px-1.5 py-0 text-[10px] h-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-black border-0 font-bold">
-              PRO
-            </Badge>
-          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-medium leading-none">
-                {user.user_metadata?.full_name || 'User'}
-              </p>
-              {userPlan === 'pro' && (
-                <Badge className="px-1.5 py-0 text-[10px] h-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-black border-0 font-bold">
-                  PRO
-                </Badge>
-              )}
-            </div>
+            <p className="text-sm font-medium leading-none">
+              {user.user_metadata?.full_name || 'User'}
+            </p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-muted-foreground">
-                  {emailsUsed.toLocaleString()} / {emailsLimit.toLocaleString()} emails
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {Math.round((emailsUsed / emailsLimit) * 100)}%
-                </p>
-              </div>
-              <Progress value={(emailsUsed / emailsLimit) * 100} className="h-2" />
-            </div>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -227,14 +180,6 @@ export default function AuthButton() {
           <KbdGroup className="ml-auto">
             <Kbd>G</Kbd>
             <Kbd>S</Kbd>
-          </KbdGroup>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push('/subscription')}>
-          <CreditCard className="mr-2 h-4 w-4" />
-          <span>Subscription</span>
-          <KbdGroup className="ml-auto">
-            <Kbd>G</Kbd>
-            <Kbd>P</Kbd>
           </KbdGroup>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

@@ -5,13 +5,11 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '../lib/supabase/client'
 import { User } from '@supabase/supabase-js'
 import AuthButton from './AuthButton'
-import UpgradeButton from './UpgradeButton'
 import AppBreadcrumb from './AppBreadcrumb'
 import { CommandMenu } from './CommandMenu'
 
 export default function NavigationWrapper() {
   const [user, setUser] = useState<User | null>(null)
-  const [userPlan, setUserPlan] = useState<'free' | 'pro'>('free')
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
   const supabase = createClient()
@@ -20,20 +18,6 @@ export default function NavigationWrapper() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
-      
-      // Fetch user plan
-      if (user) {
-        const { data: planData } = await supabase
-          .from('user_plans')
-          .select('plan')
-          .eq('user_id', user.id)
-          .single()
-        
-        if (planData) {
-          setUserPlan(planData.plan)
-        }
-      }
-      
       setLoading(false)
     }
 
@@ -55,7 +39,6 @@ export default function NavigationWrapper() {
     <>
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
         <CommandMenu />
-        <UpgradeButton currentPlan={userPlan} />
         <AuthButton />
       </div>
     </>

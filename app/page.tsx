@@ -12,14 +12,12 @@ import { AnimatedShinyText } from '@/components/ui/animated-shiny-text'
 import { RainbowButton } from '@/components/ui/rainbow-button'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
 
 type FeatureKey = 'realtime' | 'bulk' | 'analytics' | 'webhook' | 'security' | 'lists'
 
 export default function LandingPage() {
   const router = useRouter()
   const [selectedFeature, setSelectedFeature] = useState<FeatureKey>('realtime')
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
 
   const features = [
     {
@@ -335,180 +333,65 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Pricing Section */}
+        {/* Free Forever Section */}
         <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-[#fafafa]">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                Simple, Transparent Pricing
-              </h2>
-              <p className="text-sm font-mono text-gray-600 uppercase tracking-wide">
-                Choose the plan that fits your needs. Upgrade or downgrade anytime.
-              </p>
-              
-              <div className="flex items-center justify-center gap-3 mt-6">
-                <span className={`text-sm font-medium transition-colors ${
-                  billingCycle === 'monthly' ? 'text-gray-900' : 'text-gray-500'
-                }`}>
-                  Monthly
-                </span>
-                <Switch
-                  checked={billingCycle === 'yearly'}
-                  onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
-                />
-                <span className={`text-sm font-medium transition-colors ${
-                  billingCycle === 'yearly' ? 'text-gray-900' : 'text-gray-500'
-                }`}>
-                  Yearly
-                </span>
-                <Badge className="bg-green-500 text-white text-xs ml-1">Save 33%</Badge>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-              {/* Free Plan */}
-              <Card className="relative border-2 border-gray-100 shadow-sm">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <div className="w-10 h-10 rounded-lg bg-primary/ flex items-center justify-center">
-                      <img src="/bolt.svg" alt="Free" className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">Free</h3>
-                        <p className="text-xs font-mono uppercase tracking-wide text-gray-600">Perfect for solo users</p>
-                    </div>
+          <div className="max-w-4xl mx-auto">
+            <Card className="relative border-2 border-primary shadow-lg overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-secondary to-primary" />
+              <CardContent className="p-8 md:p-12">
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-2 mb-4">
+                    <Badge className="bg-green-500 text-white px-3 py-1 text-sm font-semibold">
+                      🎉 100% Free Forever
+                    </Badge>
                   </div>
                   
-                  <div className="mb-5">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold text-gray-900">$0</span>
-                      <span className="text-sm text-gray-600">/month</span>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-2.5 mb-6">
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">500 verifications/month</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">Single & bulk verification</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">Basic verification (syntax, DNS, disposable)</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">CSV upload support</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">7 days history</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">API Access: 120 req/min</span>
-                    </li>
-                  </ul>
-
-                  <Button 
-                    variant="outline" 
-                    className="w-full h-[34px] rounded-[4px] text-[12px] font-mono uppercase tracking-wide text-black border-black hover:bg-black hover:text-white transition-colors"
-                    onClick={() => router.push('/login')}
-                  >
-                    Get Started Free
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Pro Plan */}
-              <Card className="relative border-2 border-secondary shadow-sm">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-primary text-white px-3 py-0.5 text-xs font-semibold">
-                    Most Popular
-                  </Badge>
-                </div>
-                
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <div className="w-10 h-10 rounded-[8px] bg-[#fafafa] flex items-center justify-center">
-                      <img src="/pro.svg" alt="Pro" className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">Pro</h3>
-                      <p className="text-xs font-mono uppercase tracking-wide text-gray-600">For agencies and teams</p>
-                    </div>
-                  </div>
+                  <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                    No Limits. No Credit Card. No Catch.
+                  </h2>
                   
-                  <div className="mb-5">
-                    <div className="flex items-baseline gap-1 mb-1">
-                      <span className="text-4xl font-bold text-gray-900">
-                        ${billingCycle === 'monthly' ? '15' : '120'}
-                      </span>
-                      <span className="text-sm text-gray-600">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
-                    </div>
-                    {billingCycle === 'yearly' && (
-                      <p className="text-xs text-green-600 font-medium">
-                        $10/month billed annually
-                      </p>
-                    )}
-                  </div>
+                  <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                    We believe email verification should be accessible to everyone. 
+                    Enjoy all features completely free, forever.
+                  </p>
 
-                  <ul className="space-y-2.5 mb-6">
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700"><strong>1M verifications/month</strong></span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                  <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border">
+                      <Check className="h-5 w-5 text-green-500 shrink-0" />
+                      <span className="text-sm text-gray-700">Unlimited verifications</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border">
+                      <Check className="h-5 w-5 text-green-500 shrink-0" />
                       <span className="text-sm text-gray-700">Single & bulk verification</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">Full verification (syntax, DNS, SMTP, disposable)</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">CSV upload support</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">30 days history</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">Export results (CSV, JSON, Excel)</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">API Access: 600 req/min</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">Unlimited API keys</span>
-                    </li>
-                    <li className="flex items-start gap-2.5">
-                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">Priority support</span>
-                    </li>
-                  </ul>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border">
+                      <Check className="h-5 w-5 text-green-500 shrink-0" />
+                      <span className="text-sm text-gray-700">Full SMTP verification</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border">
+                      <Check className="h-5 w-5 text-green-500 shrink-0" />
+                      <span className="text-sm text-gray-700">CSV/Excel/JSON export</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border">
+                      <Check className="h-5 w-5 text-green-500 shrink-0" />
+                      <span className="text-sm text-gray-700">API access included</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border">
+                      <Check className="h-5 w-5 text-green-500 shrink-0" />
+                      <span className="text-sm text-gray-700">Unlimited history</span>
+                    </div>
+                  </div>
 
                   <RainbowButton 
-                    className="w-full h-[34px] rounded-[8px] text-[12px] font-mono uppercase tracking-wide"
+                    className="h-12 px-8 rounded-lg text-sm font-semibold"
                     onClick={() => router.push('/login')}
                   >
-                    Upgrade to Pro
-                    <ArrowRight className="ml-2 h-3 w-3" />
+                    Start Verifying for Free
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </RainbowButton>
-                </CardContent>
-              </Card>
-            </div>
-
-            <p className="text-center text-sm text-gray-600 mt-8">
-              All plans include email support. Cancel anytime, no questions asked.
-            </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
